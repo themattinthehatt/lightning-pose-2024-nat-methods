@@ -41,25 +41,28 @@ def get_version(rel_path):
 
 
 install_requires = [
-    "ibllib",
-    "matplotlib",
-    "ONE-api",
-    "opencv-python",
-    "pandas>=2.0.0",
-    "seaborn",
+    'ibllib',
+    'matplotlib',
+    'numpy',
+    'ONE-api',
+    'opencv-python',
+    'pandas>=2.0.0',
+    'requests',
+    'scipy',
+    'seaborn',
 ]
 
 
 setup(
-    name="lightning_pose_plots",
-    version=get_version(Path("lightning_pose_plots").joinpath("__init__.py")),
-    python_requires=">={}.{}".format(*REQUIRED_PYTHON),
-    license="MIT",
-    description="Package for reproducing figures from Biderman, Whiteway et al 2024",
+    name='lightning_pose_plots',
+    version=get_version(Path('lightning_pose_plots').joinpath('__init__.py')),
+    python_requires='>={}.{}'.format(*REQUIRED_PYTHON),
+    license='MIT',
+    description='Package for reproducing figures from Biderman, Whiteway et al 2024',
     long_description=long_description,
-    long_description_content_type="text/markdown",
-    author="Matt Whiteway",
-    url="https://github.com/danbider/lightning-pose",
-    packages=find_packages(exclude=["scratch"]),  # same as name
+    long_description_content_type='text/markdown',
+    author='Matt Whiteway',
+    url='https://github.com/danbider/lightning-pose',
+    packages=find_packages(exclude=['scratch']),  # same as name
     install_requires=install_requires,
 )

@@ -1,29 +1,56 @@
 # lightning-pose-2024-nat-methods
-This repository provides code to rerproduce the figures in the manuscript [Biderman, Whiteway et al, 2024](https://www.biorxiv.org/content/10.1101/2023.04.28.538703v1)
+This repository provides code to rerproduce the figures in the manuscript [Biderman, Whiteway et al, 2024](https://www.biorxiv.org/content/10.1101/2023.04.28.538703v1).
 
 ## Dependencies
 The code has been tested on Ubuntu 18.04 and 22.04, using Python 3.10.
 Required Python software packages are listed in [setup.py](https://github.com/themattinthehatt/lightning-pose-2024-nat-methods/blob/main/setup.py). 
 
-## Installation
-The installation takes about 7 min on a standard desktop computer. It is recommended to set up and activate a clean environment using conda or virtualenv, e.g.
+## Installation with conda
+
+First, ensure git is installed:
 ```shell
-virtualenv prior --python=python3.10
-source prior/bin/activate
+git --version
+````
+If ‘git’ is not recognized, [install git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git).
+
+We recommend using [conda](https://docs.anaconda.com/free/anaconda/install/index.html) to create a new environment in which this package and its dependencies will be installed:
+```shell
+conda create --name lpplots python=3.10
 ```
 
-Then clone this repository and install it along with its dependencies
+Activate the new environment:
 ```shell
-git clone https://github.com/themattinthehatt/lightning-pose-2024-nat-methods.git
-cd lightning-pose-2024-nat-methods
-pip install .
+conda activate lpplots
 ```
+Make sure you are in the activated environment during the following steps.
+
+Move into the directory where you want to place the repository folder, and then download it from GitHub:
+```shell
+cd <SOME_FOLDER>
+git clone https://github.com/themattinthehatt/lightning-pose-2024-nat-methods.git
+```
+
+Then move into the newly-created repository folder:
+```shell
+cd lightning-pose-2024-nat-methods
+```
+
+and install dependencies using one of the lines below that suits your needs best:
+```shell
+pip install -e .
+```
+
+The installation takes about 7 min on a standard desktop computer
 
 In a Python console, test if you can import functions:
 ```python
-TODO
+from lightning_pose_plots import utilities
 ```
 
+## Download figshare data
+```shell
+python scripts/download_data.py --data_dir=/home/mattw/data
+```
 
 ## Connecting to IBL database
 In order to run the example code or the tests, you need to connect to the public IBL database to access example data.
