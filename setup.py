@@ -41,7 +41,9 @@ def get_version(rel_path):
 
 
 install_requires = [
+    "ibllib",
     "matplotlib",
+    "ONE-api",
     "opencv-python",
     "pandas>=2.0.0",
     "seaborn",
