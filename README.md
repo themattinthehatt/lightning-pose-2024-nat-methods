@@ -1,9 +1,9 @@
 # lightning-pose-2024-nat-methods
-This repository provides code to rerproduce the figures in the manuscript [https://www.biorxiv.org/content/10.1101/2023.04.28.538703v1](Whiteway, Biderman et al, 2024)
+This repository provides code to rerproduce the figures in the manuscript [Whiteway, Biderman et al, 2024](https://www.biorxiv.org/content/10.1101/2023.04.28.538703v1)
 
 ## Dependencies
 The code has been tested on Ubuntu 18.04 and 22.04, using Python 3.10.
-Required Python software packages are listed in [setup.py](https://github.com/themattinthehatt/lightning-pose-2024-nat-methods/blob/main/setup.pyl). 
+Required Python software packages are listed in [setup.py](https://github.com/themattinthehatt/lightning-pose-2024-nat-methods/blob/main/setup.py). 
 
 ## Installation
 The installation takes about 7 min on a standard desktop computer. It is recommended to set up and activate a clean environment using conda or virtualenv, e.g.
