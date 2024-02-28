@@ -1,5 +1,5 @@
 # lightning-pose-2024-nat-methods
-This repository provides code to rerproduce the figures in the manuscript [Whiteway, Biderman et al, 2024](https://www.biorxiv.org/content/10.1101/2023.04.28.538703v1)
+This repository provides code to rerproduce the figures in the manuscript [Biderman, Whiteway et al, 2024](https://www.biorxiv.org/content/10.1101/2023.04.28.538703v1)
 
 ## Dependencies
 The code has been tested on Ubuntu 18.04 and 22.04, using Python 3.10.
