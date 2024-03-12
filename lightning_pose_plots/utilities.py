@@ -1,9 +1,11 @@
 """Utility functions for plots"""
 
-# import cv2
+import cv2
 import numpy as np
 import os
 import pandas as pd
+
+from lightning_pose_plots import dataset_info
 
 
 def get_frames_from_idxs(cap, idxs):
@@ -42,6 +44,7 @@ def get_frames_from_idxs(cap, idxs):
 
 
 def get_trace_mask(df, video_name, train_frames, model_type, rng_seed, metric_name=None):
+    """Helper function to subselect data from video dataframe."""
     mask = ((df.train_frames == train_frames)
             & (df.rng_seed_data_pt == rng_seed)
             & (df.model_type == model_type)
@@ -134,6 +137,52 @@ def load_single_model_video_predictions_from_parquet(
     ys = markers[:, 1::3]
     ls = markers[:, 2::3]
     return xs, ys, ls, marker_names
+
+
+def format_data_for_pca(data, pca_type, dataset_name):
+    """Reshape an array of shape (n_frames, n_keypoints * 2) into the proper format for PCA.
+
+    Parameters
+    ----------
+    data : np.ndarray
+        (n_frames, n_keypoints *2), cols are x,y,x,y,... of each keypoint
+    pca_type : str
+        'pca_singleview' | 'pca_multiview'
+    dataset_name : str
+
+    Returns
+    -------
+    np.ndarray
+
+    """
+    # only keep specified keypoints
+    if pca_type == 'pca_singleview':
+        cols_to_keep = np.array(dataset_info[dataset_name]['columns_for_singleview_pca'])
+        cols_to_keep_xy = np.sort(np.concatenate([2 * cols_to_keep, 2 * cols_to_keep + 1]))
+        labels_array = data[:, cols_to_keep_xy]
+    else:
+        # reshape to (n_frames, n_total_keypoints, 2)
+        data = data.reshape(-1, data.shape[1] // 2, 2)
+        # reshape to (n_frames * n_keypoints, n_views * 2)
+        mirrored_column_matches = dataset_info[dataset_name]['mirrored_column_matches']
+        n_views = len(mirrored_column_matches)
+        n_keypoints = len(mirrored_column_matches[0])
+        labels_array_views = []
+        for view in range(n_views):
+            assert len(mirrored_column_matches[view]) == n_keypoints
+            # all the (x,y) coordinates of all bodyparts from current view
+            labels_array_tmp = data[:, np.array(mirrored_column_matches[view]), :]
+            # first permute to: 2, batch, num_keypoints, then reshape to: 2, batch * num_keypoints
+            labels_array_tmp = labels_array_tmp.transpose(2, 0, 1).reshape(
+                2, -1
+            )  # -> 2 X num_frames*num_bodyparts
+            labels_array_views.append(labels_array_tmp)
+        # concatenate views
+        labels_array = np.concatenate(
+            labels_array_views, axis=0
+        )  # -> 2 * n_views X num_frames*num_bodyparts
+        labels_array = labels_array.T  # note the transpose
+    return labels_array
 
 
 def cleanaxis(ax):

@@ -63,7 +63,7 @@ def plot_figure1_traces(data_dir):
                            height_ratios=[0.3, 0.8, 0.8, 1])
 
     color = [250 / 255, 229 / 255, 64 / 255]
-    colors_tab10 = sns.color_palette("tab10")
+    colors_tab10 = sns.color_palette('tab10')
 
     for d, (dataset_name, info) in enumerate(dataset_info.items()):
 
@@ -168,7 +168,7 @@ def plot_figure1_sample_efficiency(data_dir):
     keypoint = 'paw1LH_top'
 
     framerate_og = 250
-    colors = ["tab:red", "tab:blue", "tab:green", "tab:gray", "tab:brown"]
+    colors = ['tab:red', 'tab:blue', 'tab:green', 'tab:gray', 'tab:brown']
     rng_seeds = ['0', '1', '2', '3', '4']
 
     # ----------------------------------------------------------------

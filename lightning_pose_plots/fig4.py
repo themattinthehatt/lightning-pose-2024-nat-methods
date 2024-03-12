@@ -350,7 +350,7 @@ def plot_figure4(data_dir, dataset_name):
                     n_points = np.sum(~d['pixel_error'].isna())
                     n_points_dict[train_frame_][model][s] = n_points
                     index = []
-                    for row, k in zip(d.index, d["keypoint"].to_numpy()):
+                    for row, k in zip(d.index, d['keypoint'].to_numpy()):
                         index.append(row + f'_{model}_{s}_{train_frame_}_{k}_{rng}')
                     df_line.append(pd.DataFrame({
                         'train_frames': train_frame_,
@@ -394,7 +394,7 @@ def plot_figure4(data_dir, dataset_name):
                         n_points = np.sum(~d['value'].isna())
                         n_points_dict[train_frames_][model][s] = n_points
                         index = []
-                        for row, k in zip(d.index, d["video_name"].to_numpy()):
+                        for row, k in zip(d.index, d['video_name'].to_numpy()):
                             index.append(
                                 f'{row}_{k}_{model}_{s}_{train_frames_}_{rng_seed_}_{metric_name}')
                         df_line_vids.append(pd.DataFrame({
@@ -426,7 +426,7 @@ def plot_figure4(data_dir, dataset_name):
     gs00 = gridspec.GridSpecFromSubplotSpec(
         4, 1, subplot_spec=gs0[0, 0], height_ratios=[1, 1, 0.6, 0.6], hspace=0.1,
     )
-    for c, coord in enumerate(["x", "y", "likelihood"]):
+    for c, coord in enumerate(['x', 'y', 'likelihood']):
         ax = fig.add_subplot(gs00[c])
         for model_type in models_to_compare:
             mask_trace = get_trace_mask(
@@ -443,12 +443,12 @@ def plot_figure4(data_dir, dataset_name):
         ax.fill_between(
             time_window_frames, ylims[0], ylims[1], color=[clr, clr, clr], zorder=0,
         )
-        if coord == "x":
-            ax.set_ylabel("x-coord", fontsize=labels_fontsize)
-        elif coord == "y":
-            ax.set_ylabel("y-coord", fontsize=labels_fontsize)
+        if coord == 'x':
+            ax.set_ylabel('x-coord', fontsize=labels_fontsize)
+        elif coord == 'y':
+            ax.set_ylabel('y-coord', fontsize=labels_fontsize)
         else:
-            ax.set_ylabel("Confidence", fontsize=labels_fontsize)
+            ax.set_ylabel('Confidence', fontsize=labels_fontsize)
         if c == 0:
             ax.set_title('Traces for %s' % keypoint, fontsize=labels_fontsize)
             ax.set_xticks([])
@@ -460,10 +460,10 @@ def plot_figure4(data_dir, dataset_name):
     # plot multiview pca metric
     if 'pca_multiview_error' in df_video_metrics.metric.unique():
         metric_name_ = 'pca_multiview_error'
-        metric_name_label_ = "Multiview\nPCA"
+        metric_name_label_ = 'Multiview\nPCA'
     else:
         metric_name_ = 'pca_singleview_error'
-        metric_name_label_ = "Singleview\nPCA"
+        metric_name_label_ = 'Singleview\nPCA'
     c += 1
     ax = fig.add_subplot(gs00[c])
     for model_type in models_to_compare:
@@ -477,7 +477,7 @@ def plot_figure4(data_dir, dataset_name):
     ylims = ax.get_ylim()
     ax.fill_between(time_window_frames, ylims[0], ylims[1], color=[clr, clr, clr], zorder=0)
     ax.set_ylabel(metric_name_label_, fontsize=labels_fontsize)
-    ax.legend(loc="lower left", framealpha=0.5)
+    ax.legend(loc='lower left', framealpha=0.5)
     ax.set_xlabel('Frame number', fontsize=labels_fontsize)
     ax.set_xlim([time_window[0] - 10, time_window[1] + 10])
     cleanaxis(ax)
@@ -491,7 +491,7 @@ def plot_figure4(data_dir, dataset_name):
         ax = fig.add_subplot(gs10[i])
         frame = get_frames_from_idxs(cap, [idx_time + frames_offset])
         # plot frame
-        if dataset_name == "crim13":
+        if dataset_name == 'crim13':
             # zoom in on the action
             ystart = 230
             xstart = 240
@@ -502,7 +502,7 @@ def plot_figure4(data_dir, dataset_name):
             ystart = 0
             xstart = 0
             ax.imshow(frame[0, 0], cmap='gray', vmin=0, vmax=255)
-        # plot predictions from "good" model
+        # plot predictions from 'good' model
         mask_1 = get_trace_mask(
             df_video_preds, video_name=vid_name,
             train_frames=train_frames, model_type=models_to_compare[1], rng_seed=rng_seed)
@@ -516,7 +516,7 @@ def plot_figure4(data_dir, dataset_name):
                 tmp[0] - xstart, tmp[1] - ystart,
                 '.', markersize=markersize, color=model_colors[models_to_compare[1]],
                 markeredgecolor='w')
-        # plot predictions from "bad" model
+        # plot predictions from 'bad' model
         mask_0 = get_trace_mask(
             df_video_preds, video_name=vid_name,
             train_frames=train_frames, model_type=models_to_compare[0], rng_seed=rng_seed)

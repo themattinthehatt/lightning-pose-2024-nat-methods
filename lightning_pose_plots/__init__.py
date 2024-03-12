@@ -9,6 +9,8 @@ model_colors = {model: colors[i] for i, model in enumerate(model_order)}
 dataset_info = {
     'mirror-mouse': {
         'skeleton': [],
+        'columns_for_singleview_pca': [0, 1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13, 14],
+        'mirrored_column_matches': [[0, 1, 2, 3, 4, 5, 6], [8, 9, 10, 11, 12, 13, 14]],
     },
     'mirror-fish': {
         'skeleton': [
@@ -61,6 +63,12 @@ dataset_info = {
             ['pectoral_R_right', 'pectoral_R_base_right'],
             ['pectoral_R_base_right', 'head_right'],
         ],
+        'columns_for_singleview_pca': [4, 5, 6, 7, 8, 9, 14, 15, 16, 22, 23, 24, 38, 39, 40, 41, 42, 43, 48, 50],
+        'mirrored_column_matches': [
+            [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+            [17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33],
+            [34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50],
+        ],
     },
     'crim13': {
         'skeleton': [
@@ -81,6 +89,8 @@ dataset_info = {
             ['white_mouse_right_rear_knee', 'white_mouse_base_of_tail'],
             ['white_mouse_left_rear_knee', 'white_mouse_base_of_tail'],
         ],
+        'columns_for_singleview_pca': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+        'mirrored_column_matches': None,
     },
     'ibl-pupil': {
         'skeleton': [
@@ -89,8 +99,12 @@ dataset_info = {
             ['pupil_bottom_r', 'pupil_left_r'],
             ['pupil_left_r', 'pupil_top_r'],
         ],
+        'columns_for_singleview_pca': [0, 1, 2, 3],
+        'mirrored_column_matches': None,
     },
     'ibl-paw': {
         'skeleton': [],
+        'columns_for_singleview_pca': None,
+        'mirrored_column_matches': None,
     },
 }

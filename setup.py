@@ -48,6 +48,7 @@ install_requires = [
     'opencv-python-headless',
     'pandas>=2.0.0',
     'requests',
+    'scikit-learn',
     'scipy',
     'seaborn',
 ]
