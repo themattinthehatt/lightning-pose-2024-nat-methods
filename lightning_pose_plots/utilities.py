@@ -1,6 +1,6 @@
 """Utility functions for plots"""
 
-import cv2
+# import cv2
 import numpy as np
 import os
 import pandas as pd
@@ -85,3 +85,59 @@ def load_results_dataframes(results_df_dir, dataset_name):
     ])
 
     return df_labeled_preds, df_labeled_metrics, df_video_preds, df_video_metrics
+
+
+def load_single_model_video_predictions_from_parquet(
+    filepath,
+    video_name,
+    rng_seed_data_pt,
+    train_frames,
+    model_type,
+):
+    """Load markers from csv file assuming DLC format.
+
+    Parameters
+    ----------
+    filepath : str
+        absolute path of pqt file
+    video_name : str
+    rng_seed_data_pt : str
+    train_frames : str
+    model_type : str
+
+    Returns
+    -------
+    tuple
+        - x coordinates (np.ndarray): shape (n_t, n_bodyparts)
+        - y coordinates (np.ndarray): shape (n_t, n_bodyparts)
+        - likelihoods (np.ndarray): shape (n_t,)
+        - marker names (list): name for each column of `x` and `y` matrices
+
+    """
+
+    # define first three rows as headers
+    # drop first column ('scorer' at level 0) which just contains frame indices
+    df_ = pd.read_parquet(filepath)
+    df = df_[
+        (df_.video_name == video_name)
+        & (df_.rng_seed_data_pt == rng_seed_data_pt)
+        & (df_.train_frames == train_frames)
+        & (df_.model_type == model_type)
+    ]
+    df = df.drop(
+        columns=['video_name', 'model_path', 'rng_seed_data_pt', 'train_frames', 'model_type']
+    )
+    # collect marker names from multiindex header
+    marker_names = [c[0] for c in df.columns[::3]]
+    markers = df.values
+    xs = markers[:, 0::3]
+    ys = markers[:, 1::3]
+    ls = markers[:, 2::3]
+    return xs, ys, ls, marker_names
+
+
+def cleanaxis(ax):
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.tick_params(top=False)
+    ax.tick_params(right=False)

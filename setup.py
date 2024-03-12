@@ -45,7 +45,7 @@ install_requires = [
     'matplotlib',
     'numpy',
     'ONE-api',
-    'opencv-python',
+    'opencv-python-headless',
     'pandas>=2.0.0',
     'requests',
     'scipy',

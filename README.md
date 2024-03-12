@@ -40,7 +40,7 @@ and install dependencies using one of the lines below that suits your needs best
 pip install -e .
 ```
 
-The installation takes about 7 min on a standard desktop computer
+The installation takes about 5-10 min on a standard desktop computer.
 
 In a Python console, test if you can import functions:
 ```python
@@ -53,8 +53,8 @@ python scripts/download_data.py --data_dir=/home/mattw/data
 ```
 
 ## Connecting to IBL database
-In order to run the example code or the tests, you need to connect to the public IBL database to access example data.
-Our API, the Open Neurophysiology Environment (ONE) has already been installed with the requirements. 
+In order to run the code, you need to connect to the public IBL database to access example data.
+The API, the Open Neurophysiology Environment (ONE) has already been installed with the requirements. 
 If you have never used ONE, you can just establish the default database connection like this in a Python console. 
 The first time you instantiate ONE you will have to enter the password (`international`) 
 ```python

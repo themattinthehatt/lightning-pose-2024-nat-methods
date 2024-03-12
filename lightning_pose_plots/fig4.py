@@ -8,15 +8,11 @@ import seaborn as sns
 
 from lightning_pose_plots import model_order, model_colors
 from lightning_pose_plots.utilities import (
+    cleanaxis,
     get_frames_from_idxs,
     get_trace_mask,
     load_results_dataframes,
 )
-
-
-def simpleaxis(ax):
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
 
 
 def compute_percentiles(arr, std_vals, percentiles):
@@ -459,7 +455,7 @@ def plot_figure4(data_dir, dataset_name):
         else:
             ax.set_xticks([])
         ax.set_xlim([time_window[0] - 10, time_window[1] + 10])
-        simpleaxis(ax)
+        cleanaxis(ax)
 
     # plot multiview pca metric
     if 'pca_multiview_error' in df_video_metrics.metric.unique():
@@ -484,7 +480,7 @@ def plot_figure4(data_dir, dataset_name):
     ax.legend(loc="lower left", framealpha=0.5)
     ax.set_xlabel('Frame number', fontsize=labels_fontsize)
     ax.set_xlim([time_window[0] - 10, time_window[1] + 10])
-    simpleaxis(ax)
+    cleanaxis(ax)
 
     # ----------------------------------------------------------------
     # frames examples
@@ -568,7 +564,7 @@ def plot_figure4(data_dir, dataset_name):
             ax.set_xlabel('Ensemble std dev', fontsize=labels_fontsize)
         ymin = min(ymin, ax.get_ylim()[0])
         ymax = min(ymax, ax.get_ylim()[1])
-        simpleaxis(ax)
+        cleanaxis(ax)
 
     # plot annotations
     for ax, tr in zip(axes, train_frames_list):
@@ -678,7 +674,7 @@ def plot_figure4(data_dir, dataset_name):
                     fontsize=labels_fontsize, transform=ax.transAxes)
             else:
                 ax.set_ylabel(None)
-            simpleaxis(ax)
+            cleanaxis(ax)
             xlims += ax.get_xlim()
             ylims += ax.get_ylim()
 
