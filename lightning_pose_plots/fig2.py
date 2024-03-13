@@ -43,8 +43,7 @@ def pearsonr_ci(x, y, alpha=0.05):
 
 
 def get_scatter_mask(
-        df, metric_name, train_frames, model_type, split_set=None, distribution=None,
-        rng_seed=None,
+    df, metric_name, train_frames, model_type, split_set=None, distribution=None, rng_seed=None,
 ):
     """Helper function to subselect data from labeled data dataframe."""
     mask = ((df.metric == metric_name)
@@ -61,9 +60,9 @@ def get_scatter_mask(
 
 
 def plot_scatters(
-        df, metric_names, train_frames, split_set, distribution, model_types, keypoint, ax,
-        add_diagonal=False, add_trendline=False, markersize=None, alpha=0.25,
-        trendline_kwargs={},
+    df, metric_names, train_frames, split_set, distribution, model_types, keypoint, ax,
+    add_diagonal=False, add_trendline=False, markersize=None, alpha=0.25,
+    trendline_kwargs={},
 ):
     """Plot scatters using matplotlib, with option to add trendline."""
 
@@ -121,13 +120,13 @@ def plot_scatters(
     return ret_vals
 
 
-def plot_figure2_scatters(data_dir):
+def plot_figure2_scatters(data_dir, format='pdf'):
 
     dataset_name = 'mirror-mouse'
     results_df_dir = os.path.join(data_dir, 'results_dataframes')
 
     # ---------------------------------------------------
-    # set params
+    # define analysis parameters
     # ---------------------------------------------------
     # define which keypoints to analyze
     cols_to_drop = [
@@ -167,7 +166,7 @@ def plot_figure2_scatters(data_dir):
     df_labeled_metrics = pd.concat([
         df_labeled_metrics,
         pd.read_parquet(
-            os.path.join(results_df_dir, "%s_labeled_metrics_temporal_lp.pqt" % dataset_name))
+            os.path.join(results_df_dir, f'{dataset_name}_labeled_metrics_temporal_lp.pqt'))
     ])
 
     # drop keypoints
@@ -193,9 +192,9 @@ def plot_figure2_scatters(data_dir):
     gs = fig.add_gridspec(1, 1, top=0.75, hspace=0.3)
 
     plots = {
-        'temporal_norm': 'Temporal difference\nloss (pix)',
-        'pca_multiview_error': 'Multiview PCA\nloss (pix)',
-        'pca_singleview_error': 'Pose PCA\nloss (pix)'
+        'temporal_norm': 'Temporal difference\nloss (pixels)',
+        'pca_multiview_error': 'Multi-view PCA\nloss (pixels)',
+        'pca_singleview_error': 'Pose PCA\nloss (pixels)'
     }
 
     gs2 = gridspec.GridSpecFromSubplotSpec(
@@ -229,19 +228,19 @@ def plot_figure2_scatters(data_dir):
     fig_dir = os.path.join(data_dir, 'figures')
     os.makedirs(fig_dir, exist_ok=True)
     plt.savefig(
-        os.path.join(fig_dir, f'fig2_loss_vs_pix_error_scatters.pdf'),
+        os.path.join(fig_dir, f'fig2_loss_vs_pix_error_scatters.{format}'),
         dpi=300,
     )
     plt.close()
 
 
-def plot_figure2_pca(data_dir):
+def plot_figure2_pca(data_dir, format='pdf'):
 
     # loop over pca loss types
     for loss_type in ['pca_singleview', 'pca_multiview']:
 
         # ---------------------------------------------------
-        # define which datasets to plot
+        # define analysis parameters
         # ---------------------------------------------------
         if loss_type == 'pca_singleview':
             dataset_names = [
@@ -261,7 +260,7 @@ def plot_figure2_pca(data_dir):
             xlabel = 'Number of PCs Kept'
 
         # ---------------------------------------------------
-        # compute variance explained
+        # load data, compute variance explained
         # ---------------------------------------------------
         var_explained = {}
         for dataset_name in dataset_names:
@@ -282,7 +281,7 @@ def plot_figure2_pca(data_dir):
             var_explained[dataset_name] = cum_sum_explained_variance
 
         # ---------------------------------------------------
-        # plot figure
+        # plot
         # ---------------------------------------------------
         plt.figure(figsize=(4.5, 4.5))
 
@@ -292,10 +291,10 @@ def plot_figure2_pca(data_dir):
             num_total_comps = var_explained[dataset_name].shape[0]
             if loss_type == 'pca_singleview':
                 xrange = np.arange(1, num_total_comps + 1) / num_total_comps
-                label = '%s (%iD)' % (dataset_name, num_total_comps)
+                label = f'{dataset_name} ({num_total_comps}D)'
             else:
                 xrange = np.arange(1, num_total_comps + 1)
-                label = '%s (%i views)' % (dataset_name, num_total_comps // 2)
+                label = f'{dataset_name} ({num_total_comps // 2} views)'
             plt.plot(
                 xrange, var_explained[dataset_name],
                 label=label,
@@ -332,16 +331,16 @@ def plot_figure2_pca(data_dir):
         fig_dir = os.path.join(data_dir, 'figures')
         os.makedirs(fig_dir, exist_ok=True)
         plt.savefig(
-            os.path.join(fig_dir, f'fig2_{loss_type}_cumulative_variance.pdf'),
+            os.path.join(fig_dir, f'fig2_{loss_type}_cumulative_variance.{format}'),
             dpi=300,
         )
         plt.close()
 
 
-def plot_figure2(data_dir):
+def plot_figure2(data_dir, format='pdf'):
 
     # plot metric vs pixel error scatters
-    plot_figure2_scatters(data_dir=data_dir)
+    plot_figure2_scatters(data_dir=data_dir, format=format)
 
     # plot cumulative var pca curves
-    plot_figure2_pca(data_dir=data_dir)
+    plot_figure2_pca(data_dir=data_dir, format=format)

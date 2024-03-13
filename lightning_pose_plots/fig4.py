@@ -207,7 +207,7 @@ def compute_ensemble_var_for_each_metric(
     return df_w_vars_vids
 
 
-def plot_figure4(data_dir, dataset_name):
+def plot_figure4(data_dir, dataset_name, format='pdf'):
 
     sns.set_style('white')
     labels_fontsize = 10
@@ -305,7 +305,7 @@ def plot_figure4(data_dir, dataset_name):
         load_results_dataframes(
             results_df_dir=os.path.join(data_dir, 'results_dataframes'),
             dataset_name=dataset_name,
-    )
+        )
 
     # drop keypoints
     df_ground_truth = df_ground_truth.drop(columns=cols_to_drop)
@@ -694,7 +694,7 @@ def plot_figure4(data_dir, dataset_name):
     fig_dir = os.path.join(data_dir, 'figures')
     os.makedirs(fig_dir, exist_ok=True)
     plt.savefig(
-        os.path.join(fig_dir, f'fig4_{dataset_name}.pdf'),
+        os.path.join(fig_dir, f'fig4_{dataset_name}.{format}'),
         dpi=300,
     )
     plt.close()

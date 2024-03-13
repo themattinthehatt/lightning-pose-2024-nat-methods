@@ -43,6 +43,7 @@ def get_version(rel_path):
 install_requires = [
     'ibllib',
     'matplotlib',
+    'matplotlib-venn',
     'numpy',
     'ONE-api',
     'opencv-python-headless',
