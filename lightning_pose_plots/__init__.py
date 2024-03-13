@@ -411,7 +411,7 @@ ibl_session_ids_paw = [
     '91a3353a-2da1-420d-8c7c-fad2fedfdd18',
     '8ca740c5-e7fe-430a-aa10-e74e9c3cbbe8',
     'a405053a-eb13-4aa4-850c-5a337e5dc7fd',
-    '1b715600-0cbc-442c-bd00-5b0ac2865de1',
+    '1b715600-0cbc-442c-bd00-5b0ac2865de1',  # example session in Fig. 5
     '158d5d35-a2ab-4a76-87b0-51048c5d5283',
     '7622da34-51b6-4661-98ae-a57d40806008',
     'e012d3e3-fdbc-4661-9ffa-5fa284e4e706',
