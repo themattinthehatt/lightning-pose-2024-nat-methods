@@ -11,9 +11,10 @@ First, ensure git is installed:
 ```shell
 git --version
 ````
-If ‘git’ is not recognized, [install git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git).
+If git is not recognized, [install git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git).
 
-We recommend using [conda](https://docs.anaconda.com/free/anaconda/install/index.html) to create a new environment in which this package and its dependencies will be installed:
+We recommend using [conda](https://docs.anaconda.com/free/anaconda/install/index.html) to create a 
+new environment in which this package and its dependencies will be installed:
 ```shell
 conda create --name lpplots python=3.10
 ```
@@ -35,7 +36,7 @@ Then move into the newly-created repository folder:
 cd lightning-pose-2024-nat-methods
 ```
 
-and install dependencies using one of the lines below that suits your needs best:
+and install the package and dependencies:
 ```shell
 pip install -e .
 ```
@@ -48,23 +49,28 @@ from lightning_pose_plots import utilities
 ```
 
 ## Download figshare data
+You will need to select a folder where the data and results are stored, referred to as `data_dir`
+in this and the following command line calls 
+(replace `/path/to/data` with a real path on your machine).
+The following command will download the labeled data and the results, which is approximate 15GB.
+This will take 10-20 minutes depending on your download speed.
 ```shell
-python scripts/download_data.py --data_dir=/home/mattw/data
+python scripts/download_data.py --data_dir=/path/to/data
 ```
 
 ## Connecting to IBL database
-In order to run the code, you need to connect to the public IBL database to access example data.
-The API, the Open Neurophysiology Environment (ONE) has already been installed with the requirements. 
+In order to plot IBL results, you need to connect to the public IBL database to access example data.
+The API, the Open Neurophysiology Environment (ONE), has already been installed with the requirements. 
 If you have never used ONE, you can just establish the default database connection like this in a Python console. 
-The first time you instantiate ONE you will have to enter the password (`international`) 
+The first time you instantiate ONE you will have to enter the password (`international`): 
 ```python
 from one.api import ONE
 ONE.setup(silent=True)
 one = ONE()
 ```
 
-**NOTE**: if you have previously used ONE with a different database you might want to run this instead. Again, the 
-first time you instantiate ONE you will have to enter the password (`international`)
+**NOTE**: if you have previously used ONE with a different database you might want to run this instead. 
+Again, the first time you instantiate ONE you will have to enter the password (`international`):
 ```python
 from one.api import ONE
 ONE.setup(base_url='https://openalyx.internationalbrainlab.org', make_default=False, silent=True)
@@ -73,6 +79,23 @@ one = ONE(base_url='https://openalyx.internationalbrainlab.org')
 
 If you run into any issues refer to the [ONE documentation](https://int-brain-lab.github.io/ONE/index.html)
 
-## Running example code
-TODO
-The data is automatically downloaded from the public IBL database, provided that the above ONE setup has been performed.
+## Reproducing the figures
+To automatically reproduce the main figures from the downloaded data, run
+```console
+python scripts/plot_figure.py --data_dir=/path/to/data --figure=all
+```
+This script will take approximately xx minutes to run.
+Plots will be saved in a folder named `figures` inside the specified `data_dir`.
+
+Individual figures can be reproduced by specifiying a number in {1, 2, 3, 4, 5} for the `figure`
+argument:
+```console
+python scripts/plot_figure.py --data_dir=/path/to/data --figure=1
+```
+
+When reproducing individual figures, you may also specify a dataset for figures 3, 4 and 5:
+```console
+python scripts/plot_figure.py --data_dir=/path/to/data --figure=3 --dataset=mirror-fish
+```
+
+See `scripts/plot_figure.py` for more information on the command line arguments.
