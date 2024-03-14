@@ -6,7 +6,7 @@ import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from lightning_pose_plots import model_order, model_colors
+from lightning_pose_plots import model_order, model_colors, dataset_info_fig4
 from lightning_pose_plots.utilities import (
     cleanaxis,
     get_frames_from_idxs,
@@ -207,79 +207,32 @@ def compute_ensemble_var_for_each_metric(
     return df_w_vars_vids
 
 
-def plot_figure4(data_dir, dataset_name, format='pdf'):
+def plot_figure4(
+    data_dir,
+    dataset_name,
+    format='pdf',
+    rng_seed='0',
+    models_to_compare=['baseline', 'semi-super context'],
+):
 
-    sns.set_style('white')
     labels_fontsize = 10
 
     # ---------------------------------------------------
     # define analysis parameters
     # ---------------------------------------------------
-    # for trace plots
-    train_frames = '75'
-    rng_seed = '0'
-    models_to_compare = ['baseline', 'semi-super context']
-    frames_offset = 0  # for video chunks, how far is the chunk into the original video?
-
-    # for error/metric plots
-    cols_to_drop = []
-    cols_to_keep = ()
-
-    if dataset_name == 'mirror-mouse':
-        # define which keypoints to analyze
-        cols_to_drop = [
-            'obs_top', 'obsHigh_bot', 'obsLow_bot',
-        ]
-        cols_to_keep = (
-            'paw1LH_top', 'paw2LF_top', 'paw3RF_top', 'paw4RH_top', 'tailBase_top',
-            'tailMid_top', 'nose_top', 'paw1LH_bot', 'paw2LF_bot',
-            'paw3RF_bot', 'paw4RH_bot', 'tailBase_bot', 'tailMid_bot', 'nose_bot',
-        )
-        # example snippet
-        vid_name = '180613_000_0_2000'
-        keypoint = 'paw4RH_top'
-        time_window = (1500, 2000)
-        t_start = 1548
-        vid_name_load = '180613_000'
-        time_window_frames = (t_start, t_start + 4)
-        # plotting options
-        train_frames_list = ['75', '1']  # 75 frames, 100% of all frames
-        train_frames_list_actual = ['75', '631']  # what these numbers actually correspond to
-        std_vals = np.arange(0, 5, 0.1)  # ensemble standard deviation range
-        yticks = [9, 10, 20, 30, 40, 50]  # pixel err vs ens std dev yticks
-
-    elif dataset_name == 'mirror-fish':
-        # example snippet
-        vid_name = '20210128_Raul'
-        keypoint = 'fork_main'
-        time_window = (1800, 2200)
-        t_start = 1871
-        vid_name_load = vid_name
-        time_window_frames = (t_start, t_start + 3)
-        # plotting options
-        train_frames_list = ['75', '1']
-        train_frames_list_actual = ['75', '354']
-        std_vals = np.arange(0, 10, 0.2)
-        yticks = [10, 20, 30]
-
-    elif dataset_name == 'crim13':
-        # example snippet
-        train_frames = '800'
-        vid_name = '032909_A29_Block15_castBCma1_t_1000_3000'
-        keypoint = 'white_mouse_right_ear'
-        time_window = (800, 1200)
-        t_start = 1151
-        vid_name_load = '032909_A29_Block15_castBCma1_t'
-        frames_offset = 1000
-        time_window_frames = (t_start, t_start + 3)
-        # plotting options
-        train_frames_list = ['75', '800']
-        train_frames_list_actual = ['75', '800']
-        std_vals = np.arange(0, 25, 1)
-        yticks = [10, 20, 30, 40, 50, 60, 70]
-
-    else:
-        raise NotImplementedError(f'plotting function not available for {dataset_name} dataset')
+    train_frames = dataset_info_fig4[dataset_name]['train_frames']
+    cols_to_drop = dataset_info_fig4[dataset_name]['cols_to_drop']
+    cols_to_keep = dataset_info_fig4[dataset_name]['cols_to_keep']
+    vid_name = dataset_info_fig4[dataset_name]['vid_name']
+    vid_name_load = dataset_info_fig4[dataset_name]['vid_name_load']
+    frames_offset = dataset_info_fig4[dataset_name]['frames_offset']
+    keypoint = dataset_info_fig4[dataset_name]['keypoint']
+    time_window = dataset_info_fig4[dataset_name]['time_window_tr']
+    time_window_frames = dataset_info_fig4[dataset_name]['time_window_fr']
+    train_frames_list = dataset_info_fig4[dataset_name]['train_frames_list']
+    train_frames_list_actual = dataset_info_fig4[dataset_name]['train_frames_actual']
+    std_vals = dataset_info_fig4[dataset_name]['std_vals']
+    yticks = dataset_info_fig4[dataset_name]['yticks']
 
     # ---------------------------------------------------
     # load data
@@ -361,9 +314,6 @@ def plot_figure4(data_dir, dataset_name, format='pdf'):
                     }, index=index))
     df_line = pd.concat(df_line)
 
-    # t = n_points_dict[train_frames_][model][0] * 5
-    # print(f'total non-nan keypoints: {t}')
-
     # ---------------------------------------------------
     # compute metrics as a function of ens std dev
     # ---------------------------------------------------
@@ -408,9 +358,6 @@ def plot_figure4(data_dir, dataset_name, format='pdf'):
 
     df_line_vids = pd.concat(df_line_vids)
 
-    # t = n_points_dict[train_frames_][model][0] * 5
-    # print(f'total non-nan keypoints: {t}')
-
     # ---------------------------------------------------
     # plot figure
     # ---------------------------------------------------
@@ -418,7 +365,8 @@ def plot_figure4(data_dir, dataset_name, format='pdf'):
     gs = fig.add_gridspec(2, 1, top=0.93, height_ratios=[2, 2], hspace=0.2)
     gs0 = gridspec.GridSpecFromSubplotSpec(
         2, 2, subplot_spec=gs[0, 0],
-        height_ratios=[2.75, 1.25], hspace=0.3, width_ratios=[2, 1], wspace=0.3)
+        height_ratios=[2.75, 1.25], hspace=0.3, width_ratios=[2, 1], wspace=0.3,
+    )
 
     # ----------------------------------------------------------------
     # traces
@@ -431,7 +379,8 @@ def plot_figure4(data_dir, dataset_name, format='pdf'):
         for model_type in models_to_compare:
             mask_trace = get_trace_mask(
                 df_video_preds, video_name=vid_name,
-                train_frames=train_frames, model_type=model_type, rng_seed=rng_seed)
+                train_frames=train_frames, model_type=model_type, rng_seed=rng_seed,
+            )
             ax.plot(
                 np.arange(time_window[0], time_window[1]),
                 df_video_preds[mask_trace].loc[:, (keypoint, coord)][slice(*time_window)],
@@ -440,9 +389,7 @@ def plot_figure4(data_dir, dataset_name, format='pdf'):
             )
         ylims = ax.get_ylim()
         clr = 0.75
-        ax.fill_between(
-            time_window_frames, ylims[0], ylims[1], color=[clr, clr, clr], zorder=0,
-        )
+        ax.fill_between(time_window_frames, ylims[0], ylims[1], color=[clr, clr, clr], zorder=0)
         if coord == 'x':
             ax.set_ylabel('x-coord', fontsize=labels_fontsize)
         elif coord == 'y':
@@ -593,8 +540,9 @@ def plot_figure4(data_dir, dataset_name, format='pdf'):
         3, 1, subplot_spec=gs[1, 0], height_ratios=[0.01, 1, 1], hspace=0.5)
 
     ax = fig.add_subplot(gs1[0])
+    total_frames = int(n_points_dict['75']['dlc'][0] * len(rng_seeds))
     ax.set_title(
-        f'Unlabeled data metrics ({int(n_points_dict["75"]["dlc"][0] * len(rng_seeds))} total frames)',
+        f'Unlabeled data metrics ({total_frames} total frames)',
         fontsize=labels_fontsize + 2,
     )
     ax.set_frame_on(False)
@@ -658,7 +606,7 @@ def plot_figure4(data_dir, dataset_name, format='pdf'):
             # formatting
             # -----------------------
             if train_frame == '75':
-                ax_text = f'75 train frames'
+                ax_text = '75 train frames'
             else:
                 ax_text = f'{train_frames_list_actual[-1]} train frames'
             if j == 1:
@@ -693,8 +641,5 @@ def plot_figure4(data_dir, dataset_name, format='pdf'):
     plt.suptitle(f'{dataset_name} dataset', fontsize=labels_fontsize + 2)
     fig_dir = os.path.join(data_dir, 'figures')
     os.makedirs(fig_dir, exist_ok=True)
-    plt.savefig(
-        os.path.join(fig_dir, f'fig4_{dataset_name}.{format}'),
-        dpi=300,
-    )
+    plt.savefig(os.path.join(fig_dir, f'fig4_{dataset_name}.{format}'), dpi=300)
     plt.close()

@@ -9,13 +9,94 @@ colors = [colors_tab10[4], colors_tab10[3], colors_tab10[1], colors_tab10[2], co
 model_order = ['dlc', 'baseline', 'context', 'semi-super', 'semi-super context']
 model_colors = {model: colors[i] for i, model in enumerate(model_order)}
 
+
+# info about each dataset - keypoint names, skeleton, which keypoints to include in PCA losses
 dataset_info = {
     'mirror-mouse': {
+        # keypoint names, in the order they appear in the labeled data file
+        'keypoints': [
+            'paw1LH_top',
+            'paw2LF_top',
+            'paw3RF_top',
+            'paw4RH_top',
+            'tailBase_top',
+            'tailMid_top',
+            'nose_top',
+            'obs_top',
+            'paw1LH_bot',
+            'paw2LF_bot',
+            'paw3RF_bot',
+            'paw4RH_bot',
+            'tailBase_bot',
+            'tailMid_bot',
+            'nose_bot',
+            'obsHigh_bot',
+            'obsLow_bot',
+        ],
+        # which keypoints to connect for drawing a skeleton over the animal
         'skeleton': [],
+        # columns of the labeled data to include when computing Pose PCA
         'columns_for_singleview_pca': [0, 1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13, 14],
-        'mirrored_column_matches': [[0, 1, 2, 3, 4, 5, 6], [8, 9, 10, 11, 12, 13, 14]],
+        # columns of the labeled data to include when computing Multi-view PCA
+        'mirrored_column_matches': [
+            [0, 1, 2, 3, 4, 5, 6],
+            [8, 9, 10, 11, 12, 13, 14]
+        ],
     },
     'mirror-fish': {
+        'keypoints': [
+            'chin_tip_main',
+            'chin3_4_main',
+            'chin_half_main',
+            'chin1_4_main',
+            'chin_base_main',
+            'head_main',
+            'mid_main',
+            'tail_neck_main',
+            'caudal_v_main',
+            'caudal_d_main',
+            'pectoral_L_base_main',
+            'pectoral_L_main',
+            'pectoral_R_base_main',
+            'pectoral_R_main',
+            'dorsal_main',
+            'anal_main',
+            'fork_main',
+            'chin_tip_top',
+            'chin3_4_top',
+            'chin_half_top',
+            'chin1_4_top',
+            'chin_base_top',
+            'head_top',
+            'mid_top',
+            'tail_neck_top',
+            'caudal_v_top',
+            'caudal_d_top',
+            'pectoral_L_base_top',
+            'pectoral_L_top',
+            'pectoral_R_base_top',
+            'pectoral_R_top',
+            'dorsal_top',
+            'anal_top',
+            'fork_top',
+            'chin_tip_right',
+            'chin3_4_right',
+            'chin_half_right',
+            'chin1_4_right',
+            'chin_base_right',
+            'head_right',
+            'mid_right',
+            'tail_neck_right',
+            'caudal_v_right',
+            'caudal_d_right',
+            'pectoral_L_base_right',
+            'pectoral_L_right',
+            'pectoral_R_base_right',
+            'pectoral_R_right',
+            'dorsal_right',
+            'anal_right',
+            'fork_right',
+        ],
         'skeleton': [
             ['chin_base_main', 'head_main'],
             ['chin1_4_main', 'chin_base_main'],
@@ -66,7 +147,9 @@ dataset_info = {
             ['pectoral_R_right', 'pectoral_R_base_right'],
             ['pectoral_R_base_right', 'head_right'],
         ],
-        'columns_for_singleview_pca': [4, 5, 6, 7, 8, 9, 14, 15, 16, 22, 23, 24, 38, 39, 40, 41, 42, 43, 48, 50],
+        'columns_for_singleview_pca': [
+            4, 5, 6, 7, 8, 9, 14, 15, 16, 22, 23, 24, 38, 39, 40, 41, 42, 43, 48, 50,
+        ],
         'mirrored_column_matches': [
             [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
             [17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33],
@@ -74,6 +157,22 @@ dataset_info = {
         ],
     },
     'crim13': {
+        'keypoints': [
+            'black_mouse_nose',
+            'black_mouse_right_ear',
+            'black_mouse_left_ear',
+            'black_mouse_top_of_neck',
+            'black_mouse_right_rear_knee',
+            'black_mouse_left_rear_knee',
+            'black_mouse_base_of_tail',
+            'white_mouse_nose',
+            'white_mouse_right_ear',
+            'white_mouse_left_ear',
+            'white_mouse_top_of_neck',
+            'white_mouse_right_rear_knee',
+            'white_mouse_left_rear_knee',
+            'white_mouse_base_of_tail',
+        ],
         'skeleton': [
             ['black_mouse_nose', 'black_mouse_right_ear'],
             ['black_mouse_nose', 'black_mouse_left_ear'],
@@ -115,23 +214,32 @@ dataset_info = {
 }
 
 
+# settings for Fig. 1b
 dataset_info_fig1_traces = {
-    'model_type': 'dlc',
-    'train_frames': '1',
-    'video_name': '180609_000_25000_27000',
-    'video_offset': 25000,
-    'idxs': np.arange(500, 775),
-    'keypoint': 'paw1LH_top',
+    'model_type': 'dlc',                        # plot predictions from dlc
+    'train_frames': '1',                        # use model trained on all frames
+    'video_name': '180609_000_25000_27000',     # specific video chunk
+    'video_offset': 25000,                      # offset of chunk from beginning of original video
+    'framerate': 250,                           # framerate of camera, to compute frames -> seconds
+    'idxs': np.arange(500, 775),                # selected window to plot
+    'keypoint': 'paw1LH_top',                   # selected keypoint to plot
 }
 
 
+# settings for Fig. 1c
 dataset_info_fig1_sample_efficiency = {
     'mirror-mouse': {
+        # description of dataset
         'desc': 'Mouse locomotion\n(Warren et al., 2021)\n\n17 keypoints (2 views)',
+        # in-distribution example frame
         'frame_InD': 'labeled-data_InD/180605_000/img076129.png',
+        # out-of-distribution example frame
         'frame_OOD': 'labeled-data_OOD/180607_004/img018677.png',
+        # size of overlaid markers on example frames
         'markersize': 6,
+        # in-distribution labels filename
         'csv_InD': 'labels_InD.csv',
+        # out-of-distribution labels filename
         'csv_OOD': 'labels_OOD.csv',
     },
     'mirror-fish': {
@@ -143,7 +251,7 @@ dataset_info_fig1_sample_efficiency = {
         'csv_OOD': 'labels_OOD.csv',
     },
     'crim13': {
-        'desc': 'Resident-intruder assay\n(Burgos-Artizzu et al., 2012)\n\n14 keypoints (2 animals)',
+        'desc': 'Resident-intruder assay\n(Burgos-Artizzu et al., 2012)\n\n14 keypoints (2 animals)',  # noqa
         'frame_InD': 'labeled-data_InD/012609_A29_Block12_BCma1_t/img00007407.png',
         'frame_OOD': 'labeled-data_OOD/030609_A25_Block11_BCfe1_t/img00009929.png',
         'markersize': 1,
@@ -152,7 +260,7 @@ dataset_info_fig1_sample_efficiency = {
     },
     'ibl-pupil': {
         'desc': 'Mouse pupil tracking\n(IBL 2023)\n\n4 keypoints',
-        'frame_InD': 'labeled-data/_iblrig_leftCamera.raw.03cd8002-f8db-42a9-9fcc-51a114661d50_eye/img00064461.png',
+        'frame_InD': 'labeled-data/_iblrig_leftCamera.raw.03cd8002-f8db-42a9-9fcc-51a114661d50_eye/img00064461.png',  # noqa
         'frame_OOD': 'labeled-data/d9f0c293-df4c-410a-846d-842e47c6b502_left/img00083861.png',
         'markersize': 5,
         'csv_InD': 'CollectedData.csv',
@@ -160,7 +268,7 @@ dataset_info_fig1_sample_efficiency = {
     },
     'ibl-paw': {
         'desc': 'Mouse perceptual decision-making\n(IBL 2023)\n\n2 keypoints',
-        'frame_InD': 'labeled-data/6c6983ef-7383-4989-9183-32b1a300d17a_iblrig_leftCamera.paws_downsampled_20min/img00000018.png',
+        'frame_InD': 'labeled-data/6c6983ef-7383-4989-9183-32b1a300d17a_iblrig_leftCamera.paws_downsampled_20min/img00000018.png',  # noqa
         'frame_OOD': 'labeled-data/30e5937e-e86a-47e6-93ae-d2ae3877ff8e_left/img00026312.png',
         'markersize': 10,
         'csv_InD': 'CollectedData.csv',
@@ -169,17 +277,17 @@ dataset_info_fig1_sample_efficiency = {
 }
 
 
+# settings for Fig. 3a,b
 dataset_info_fig3_examples = {
     'mirror-mouse-0': {
-        'vid_name_tr': '180613_000_25000_27000',
-        'vid_name_load': '180613_000',
-        'frames_offset': 25000,
-        'keypoint_tr': 'paw1LH_bot',
-        'time_window_tr': (200, 425),
-        'time_window_beg': 290,
-        'n_frames': 5,
-        'train_frames': '1',
-        'metric_thresh': 20,
+        'vid_name_tr': '180613_000_25000_27000',    # specified video chunk
+        'vid_name_load': '180613_000',              # name of original video the chunk comes from
+        'frames_offset': 25000,                     # offset of chunk from beginning of original
+        'keypoint_tr': 'paw1LH_bot',                # selected keypoint to plot
+        'time_window_tr': (200, 425),               # selected window to plot (traces)
+        'time_window_fr': (290, 295),               # selected window to plot (frames)
+        'train_frames': '1',                        # use model trained on all frames
+        'metric_thresh': 20,                        # metric vals above this thresh denote outliers
     },
     'mirror-fish-0': {
         'vid_name_tr': '20210202_Sean',
@@ -187,8 +295,7 @@ dataset_info_fig3_examples = {
         'frames_offset': 0,
         'keypoint_tr': 'caudal_d_right',
         'time_window_tr': (0, 2000),
-        'time_window_beg': 1232,
-        'n_frames': 5,
+        'time_window_fr': (1232, 1237),
         'train_frames': '1',
         'metric_thresh': 20,
     },
@@ -198,8 +305,7 @@ dataset_info_fig3_examples = {
         'frames_offset': 1000,
         'keypoint_tr': 'black_mouse_base_of_tail',
         'time_window_tr': (950, 1150),
-        'time_window_beg': 1007,
-        'n_frames': 4,
+        'time_window_fr': (1007, 1011),
         'train_frames': '800',
         'metric_thresh': 50,
     },
@@ -209,16 +315,17 @@ dataset_info_fig3_examples = {
         'frames_offset': 1000,
         'keypoint_tr': 'black_mouse_left_rear_knee',
         'time_window_tr': (1800, 2000),
-        'time_window_beg': 1863,
-        'n_frames': 4,
+        'time_window_fr': (1863, 1867),
         'train_frames': '800',
         'metric_thresh': 50,
     },
 }
 
 
+# settings for Fig. 3d
 dataset_info_fig3_metrics = {
     'mirror-mouse': {
+        # compute metrics on a subset of keypoints
         'cols_to_keep': (
             'paw1LH_top', 'paw2LF_top', 'paw3RF_top', 'paw4RH_top',
             'paw1LH_bot', 'paw2LF_bot', 'paw3RF_bot', 'paw4RH_bot',
@@ -228,13 +335,15 @@ dataset_info_fig3_metrics = {
             'tailBase_top', 'tailMid_top', 'tailBase_bot', 'tailMid_bot',
             'nose_top', 'nose_bot',
         ],
+        # name of analyzed keypoints without view information
         'bodyparts_list': ['paw1LH', 'paw2LF', 'paw3RF', 'paw4RH'],
+        # view names
         'views_list': ['top', 'bot'],
-        'views_list_x': [],  # for mirror-fish
-        'views_list_y': [],  # for mirror-fish
-        'metric_thresh': 20,
-        'max_frames': '1',
-        'total_frames': 631,
+        'views_list_x': [],     # for mirror-fish
+        'views_list_y': [],     # for mirror-fish
+        'metric_thresh': 20,    # metric vals above this thresh denote outliers
+        'max_frames': '1',      # number/fraction of training frames for abundant-label regime
+        'total_frames': 631,    # the actual number of frames 'max_frames' corresponds to
     },
     'mirror-fish': {
         'cols_to_keep': (
@@ -249,13 +358,13 @@ dataset_info_fig3_metrics = {
             'chin_base_top', 'chin1_4_top', 'chin3_4_top', 'chin_half_top', 'chin_tip_top',
             'caudal_v_top', 'caudal_d_top', 'dorsal_top', 'anal_top', 'fork_top',
             'pectoral_L_base_top', 'pectoral_L_top', 'pectoral_R_base_top', 'pectoral_R_top',
-            'chin_base_right', 'chin1_4_right', 'chin3_4_right', 'chin_half_right', 'chin_tip_right',
+            'chin_base_right', 'chin1_4_right', 'chin3_4_right', 'chin_half_right', 'chin_tip_right',  # noqa
             'caudal_v_right', 'caudal_d_right', 'dorsal_right', 'anal_right', 'fork_right',
-            'pectoral_L_base_right', 'pectoral_L_right', 'pectoral_R_base_right', 'pectoral_R_right',
+            'pectoral_L_base_right', 'pectoral_L_right', 'pectoral_R_base_right', 'pectoral_R_right',  # noqa
         ],
         'bodyparts_list': ['head', 'mid', 'tail_neck'],
-        'views_list_x': ['main', 'top'],    # views where we look at x-diffs to det outliers
-        'views_list_y': ['main', 'right'],  # views where we look at y-diffs to det outliers
+        'views_list_x': ['main', 'top'],    # views where we look at x-diffs to detect outliers
+        'views_list_y': ['main', 'right'],  # views where we look at y-diffs to detect outliers
         'views_list': ['main', 'top', 'right'],
         'metric_thresh': 20,
         'max_frames': '1',
@@ -290,49 +399,61 @@ dataset_info_fig3_metrics = {
 }
 
 
+# setting for Fig. 4
 dataset_info_fig4 = {
-#     'mirror-mouse': {
-#         'cols_to_drop':
-#         'cols_to_keep':
-#         'vid_name':
-#         'vid_name_load':
-#         'keypoint':
-#         'time_window':
-#         'time_window_beg':
-#         'n_frames':
-#         'train_frames_list':
-#         'train_frames_actual':
-#         'std_vals':
-#         'yticks':
-#     },
-#     'mirror-fish': {
-#         'cols_to_drop':
-#         'cols_to_keep':
-#         'vid_name':
-#         'vid_name_load':
-#         'keypoint':
-#         'time_window':
-#         'time_window_beg':
-#         'n_frames':
-#         'train_frames_list':
-#         'train_frames_actual':
-#         'std_vals':
-#         'yticks':
-#     },
-#     'crim13': {
-#         'cols_to_drop':
-#         'cols_to_keep':
-#         'vid_name':
-#         'vid_name_load':
-#         'keypoint':
-#         'time_window':
-#         'time_window_beg':
-#         'n_frames':
-#         'train_frames_list':
-#         'train_frames_actual':
-#         'std_vals':
-#         'yticks':
-#     },
+    'mirror-mouse': {
+        # number of train frames for trace example in panel a
+        'train_frames': '75',
+        # compute metrics on a subset of keypoints
+        'cols_to_keep': (
+            'paw1LH_top', 'paw2LF_top', 'paw3RF_top', 'paw4RH_top', 'tailBase_top',
+            'tailMid_top', 'nose_top', 'paw1LH_bot', 'paw2LF_bot',
+            'paw3RF_bot', 'paw4RH_bot', 'tailBase_bot', 'tailMid_bot', 'nose_bot',
+        ),
+        'cols_to_drop': [
+            'obs_top', 'obsHigh_bot', 'obsLow_bot',
+        ],
+        'vid_name': '180613_000_0_2000',        # specific video chunk for trace example in panel a
+        'vid_name_load': '180613_000',          # name of original video the chunk comes from
+        'frames_offset': 0,                     # offset of chunk from beginning of original
+        'keypoint': 'paw4RH_top',               # selected keypoint to plot in trace example
+        'time_window_tr': (1500, 2000),         # selected window to plot (traces)
+        'time_window_fr': (1548, 1552),         # selected window to plot (frames)
+        'train_frames_list': ['75', '1'],       # 75 frames, 100% of all frames
+        'train_frames_actual': ['75', '631'],   # what these numbers actually correspond to
+        'std_vals': np.arange(0, 5, 0.1),       # ensemble standard deviation range
+        'yticks': [9, 10, 20, 30, 40, 50],      # pixel err vs ens std dev yticks
+    },
+    'mirror-fish': {
+        'train_frames': '75',
+        'cols_to_keep': (),
+        'cols_to_drop': [],
+        'vid_name': '20210128_Raul',
+        'vid_name_load': '20210128_Raul',
+        'frames_offset': 0,
+        'keypoint': 'fork_main',
+        'time_window_tr': (1800, 2200),
+        'time_window_fr': (1871, 1874),
+        'train_frames_list': ['75', '1'],
+        'train_frames_actual': ['75', '354'],
+        'std_vals': np.arange(0, 10, 0.2),
+        'yticks': [10, 20, 30],
+    },
+    'crim13': {
+        'train_frames': '800',
+        'cols_to_keep': (),
+        'cols_to_drop': [],
+        'vid_name': '032909_A29_Block15_castBCma1_t_1000_3000',
+        'vid_name_load': '032909_A29_Block15_castBCma1_t',
+        'frames_offset': 1000,
+        'keypoint': 'white_mouse_right_ear',
+        'time_window_tr': (800, 1200),
+        'time_window_fr': (1151, 1154),
+        'train_frames_list': ['75', '800'],
+        'train_frames_actual': ['75', '800'],
+        'std_vals': np.arange(0, 25, 1),
+        'yticks': [10, 20, 30, 40, 50, 60, 70],
+    },
 }
 
 

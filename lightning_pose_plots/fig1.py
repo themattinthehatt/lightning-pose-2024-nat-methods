@@ -26,8 +26,8 @@ def plot_figure1_traces(data_dir, format='pdf'):
     video_offset = dataset_info_fig1_traces['video_offset']
     idxs = dataset_info_fig1_traces['idxs']
     keypoint = dataset_info_fig1_traces['keypoint']
+    framerate_og = dataset_info_fig1_traces['framerate']
 
-    framerate_og = 250
     colors = ['tab:red', 'tab:blue', 'tab:green', 'tab:gray', 'tab:brown']
     rng_seeds = ['0', '1', '2', '3', '4']
 

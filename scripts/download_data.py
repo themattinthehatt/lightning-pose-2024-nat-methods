@@ -23,7 +23,7 @@ datasets_url_dict = {
     # 'results_dataframes': 'todo',
 }
 
-print('Downloading data - this may take 10-15 minutes depending on your download speed')
+print('Downloading data - this will take 10-15 minutes depending on your download speed')
 
 for dataset, url in datasets_url_dict.items():
 

@@ -52,7 +52,8 @@ from lightning_pose_plots import utilities
 You will need to select a folder where the data and results are stored, referred to as `data_dir`
 in this and the following command line calls 
 (replace `/path/to/data` with a real path on your machine).
-The following command will download the labeled data and the results, which is approximate 11GB.
+The following command will download the labeled data and the results dataframes, which are together
+approximately 11GB.
 This will take 10-20 minutes depending on your download speed.
 ```shell
 python scripts/download_data.py --data_dir=/path/to/data
@@ -63,7 +64,7 @@ To automatically reproduce the main figures from the downloaded data, run
 ```console
 python scripts/plot_figure.py --data_dir=/path/to/data --figure=all
 ```
-This script will take approximately xx minutes to run.
+This script will take approximately 45 minutes to run.
 Plots will be saved in a folder named `figures` inside the specified `data_dir`.
 
 Individual figures can be reproduced by specifiying a number in {1, 2, 3, 4, 5} for the `figure`

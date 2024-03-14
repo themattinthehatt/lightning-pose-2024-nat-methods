@@ -18,6 +18,9 @@ format = args.format
 non_ibl_datasets = ['mirror-mouse', 'mirror-fish', 'crim13']
 ibl_datasets = ['ibl-pupil', 'ibl-paw']
 
+import time
+tbeg = time.time()
+
 # if plotting all figures, plot all datasets as well
 if figure == 'all':
     dataset_list = non_ibl_datasets
@@ -73,3 +76,6 @@ if figure == '5' or figure == 'all':
         print(f'plotting figure 5 for {dataset_name}...', end='', flush=True)
         plot_figure5(data_dir=data_dir, dataset_name=dataset_name, format=format)
         print('done')
+
+tend =time.time()
+print(tend-tbeg)

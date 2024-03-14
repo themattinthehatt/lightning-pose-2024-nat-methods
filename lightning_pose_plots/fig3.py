@@ -173,21 +173,26 @@ def compute_outlier_metrics(
     return df_errors, frames, n_total_kps
 
 
-def plot_figure3_example_frame_sequence(data_dir, dataset_name, version=0, format='pdf'):
+def plot_figure3_example_frame_sequence(
+    data_dir,
+    dataset_name,
+    version=0,
+    format='pdf',
+    rng_seed='0',
+    model_type='dlc',
+):
 
     # ---------------------------------------------------
     # define analysis parameters
     # ---------------------------------------------------
-    rng_seed = '0'
-    model_type = 'dlc'
-
     vid_name_ = dataset_info_fig3_examples[f'{dataset_name}-{version}']['vid_name_tr']
     vid_name_load = dataset_info_fig3_examples[f'{dataset_name}-{version}']['vid_name_load']
     frames_offset = dataset_info_fig3_examples[f'{dataset_name}-{version}']['frames_offset']
     keypoint_ = dataset_info_fig3_examples[f'{dataset_name}-{version}']['keypoint_tr']
-    time_window_beg = dataset_info_fig3_examples[f'{dataset_name}-{version}']['time_window_beg']
-    n_frames = dataset_info_fig3_examples[f'{dataset_name}-{version}']['n_frames']
+    time_window_fr = dataset_info_fig3_examples[f'{dataset_name}-{version}']['time_window_fr']
     train_frames = dataset_info_fig3_examples[f'{dataset_name}-{version}']['train_frames']
+
+    time_window_fr = np.arange(*time_window_fr)
 
     # ---------------------------------------------------
     # load data
@@ -212,9 +217,9 @@ def plot_figure3_example_frame_sequence(data_dir, dataset_name, version=0, forma
     # plot
     # ---------------------------------------------------
     fig = plt.figure(constrained_layout=False, figsize=(12, 6))
-    gs = fig.add_gridspec(1, n_frames, wspace=0)
+    gs = fig.add_gridspec(1, len(time_window_fr), wspace=0)
 
-    for i, idx_time in enumerate(np.arange(time_window_beg, time_window_beg + n_frames)):
+    for i, idx_time in enumerate(time_window_fr):
         ax = fig.add_subplot(gs[i])
         ax.axis('off')
         frame = get_frames_from_idxs(cap, [idx_time + frames_offset])
@@ -256,7 +261,14 @@ def plot_figure3_example_frame_sequence(data_dir, dataset_name, version=0, forma
     plt.close()
 
 
-def plot_figure3_example_traces(data_dir, dataset_name, version=0, format='pdf'):
+def plot_figure3_example_traces(
+    data_dir,
+    dataset_name,
+    version=0,
+    format='pdf',
+    rng_seed='0',
+    model_type='dlc',
+):
 
     cmap_red = cm.get_cmap('tab10', 2)
     cmap_red.colors[0, :] = [1, 1, 1, 0]
@@ -271,10 +283,6 @@ def plot_figure3_example_traces(data_dir, dataset_name, version=0, format='pdf')
     # ---------------------------------------------------
     # define analysis parameters
     # ---------------------------------------------------
-    rng_seed = '0'
-    model_type = 'dlc'
-
-    # get dataset-specific vid/keypoint info
     vid_name_tr = dataset_info_fig3_examples[f'{dataset_name}-{version}']['vid_name_tr']
     keypoint_tr = dataset_info_fig3_examples[f'{dataset_name}-{version}']['keypoint_tr']
     time_window_tr = dataset_info_fig3_examples[f'{dataset_name}-{version}']['time_window_tr']
@@ -410,7 +418,12 @@ def plot_figure3_example_traces(data_dir, dataset_name, version=0, format='pdf')
     plt.close()
 
 
-def plot_figure3_venn_diagrams(data_dir, dataset_name, format='pdf'):
+def plot_figure3_venn_diagrams(
+    data_dir,
+    dataset_name,
+    format='pdf',
+    model_type='dlc',
+):
 
     # ---------------------------------------------------
     # define analysis parameters
@@ -453,7 +466,7 @@ def plot_figure3_venn_diagrams(data_dir, dataset_name, format='pdf'):
         views_list_y=views_list_y,
         metric_thresh=metric_thresh,
         confidence_thresh=0.9,
-        model_type='dlc',
+        model_type=model_type,
     )
 
     # ---------------------------------------------------
@@ -477,7 +490,7 @@ def plot_figure3_venn_diagrams(data_dir, dataset_name, format='pdf'):
             frames['pca_singleview_error'][tr],
         ])
         outliers = int(round(len(np.unique(a)) / 1000))
-        total = int(round(n_total_kps["confidence"][tr] / 1000))
+        total = int(round(n_total_kps['confidence'][tr] / 1000))
         ax = fig.add_subplot(gs0[0, t])
         ax.set_axis_off()
         tr_ = '75' if tr == '75' else total_frames
@@ -530,14 +543,16 @@ def plot_figure3_venn_diagrams(data_dir, dataset_name, format='pdf'):
     # ----------------------------------------------------------------
     fig_dir = os.path.join(data_dir, 'figures')
     os.makedirs(fig_dir, exist_ok=True)
-    plt.savefig(
-        os.path.join(fig_dir, f'fig3c_{dataset_name}_venn_diagrams.{format}'),
-        dpi=300,
-    )
+    plt.savefig(os.path.join(fig_dir, f'fig3c_{dataset_name}_venn_diagrams.{format}'), dpi=300)
     plt.close()
 
 
-def plot_figure3_outlier_detector_performance(data_dir, dataset_name, format='pdf'):
+def plot_figure3_outlier_detector_performance(
+    data_dir,
+    dataset_name,
+    format='pdf',
+    model_type='dlc',
+):
 
     # ---------------------------------------------------
     # define analysis parameters
@@ -550,6 +565,7 @@ def plot_figure3_outlier_detector_performance(data_dir, dataset_name, format='pd
     views_list_y = dataset_info_fig3_metrics[dataset_name]['views_list_y']
     metric_thresh = dataset_info_fig3_metrics[dataset_name]['metric_thresh']
     max_frames = dataset_info_fig3_metrics[dataset_name]['max_frames']
+    total_frames = dataset_info_fig3_metrics[dataset_name]['total_frames']
 
     # ---------------------------------------------------
     # load data
@@ -579,7 +595,7 @@ def plot_figure3_outlier_detector_performance(data_dir, dataset_name, format='pd
         views_list_y=views_list_y,
         metric_thresh=metric_thresh,
         confidence_thresh=0.9,
-        model_type='dlc',
+        model_type=model_type,
     )
 
     # ---------------------------------------------------
@@ -607,7 +623,7 @@ def plot_figure3_outlier_detector_performance(data_dir, dataset_name, format='pd
                 boxprops=dict(facecolor='none', edgecolor='k'),
                 linewidth=1, width=0.4,
             )
-            if a + 1 == len(order):
+            if a + 1 == len(bodyparts_list):
                 xticklabels = [
                     'Conf',
                     'Temporal diff',
@@ -625,7 +641,8 @@ def plot_figure3_outlier_detector_performance(data_dir, dataset_name, format='pd
             else:
                 ax.set_ylabel('')
             if a == 0:
-                ax.set_title(f'{tf} train frames', fontsize=10)
+                tfs = total_frames if tf == max_frames else tf
+                ax.set_title(f'{tfs} train frames', fontsize=10)
             cleanaxis(ax)
 
     # ----------------------------------------------------------------

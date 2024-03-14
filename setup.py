@@ -1,25 +1,7 @@
+from setuptools import find_packages, setup
 import sys
 from pathlib import Path
 
-from setuptools import find_packages, setup
-
-CURRENT_DIRECTORY = Path(__file__).parent.absolute()
-
-CURRENT_PYTHON = sys.version_info[:2]
-REQUIRED_PYTHON = (3, 8)
-if CURRENT_PYTHON < REQUIRED_PYTHON:
-    sys.stderr.write(
-        """
-==========================
-Unsupported Python version
-==========================
-This version of brainwide encodeco requires Python {}.{}, but you're trying to
-install it on Python {}.{}.
-""".format(
-            *(REQUIRED_PYTHON + CURRENT_PYTHON)
-        )
-    )
-    sys.exit(1)
 
 with open("README.md", "r") as f:
     long_description = f.read()
@@ -37,7 +19,7 @@ def get_version(rel_path):
             delim = '"' if '"' in line else "'"
             return line.split(delim)[1]
     else:
-        raise RuntimeError("Unable to find version string.")
+        raise RuntimeError('Unable to find version string.')
 
 
 install_requires = [
@@ -56,7 +38,6 @@ install_requires = [
 setup(
     name='lightning_pose_plots',
     version=get_version(Path('lightning_pose_plots').joinpath('__init__.py')),
-    python_requires='>={}.{}'.format(*REQUIRED_PYTHON),
     license='MIT',
     description='Package for reproducing figures from Biderman, Whiteway et al 2024',
     long_description=long_description,

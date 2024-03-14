@@ -5,7 +5,6 @@ import numpy as np
 import os
 import pandas as pd
 from scipy import stats
-import seaborn as sns
 from sklearn.decomposition import PCA
 
 from lightning_pose_plots.utilities import cleanaxis, format_data_for_pca, load_results_dataframes
@@ -46,10 +45,11 @@ def get_scatter_mask(
     df, metric_name, train_frames, model_type, split_set=None, distribution=None, rng_seed=None,
 ):
     """Helper function to subselect data from labeled data dataframe."""
-    mask = ((df.metric == metric_name)
-            & (df.train_frames == train_frames)
-            & (df.model_type == model_type)
-           )
+    mask = (
+        (df.metric == metric_name)
+        & (df.train_frames == train_frames)
+        & (df.model_type == model_type)
+    )
     if split_set is not None:
         mask = mask & (df.set == split_set)
     if distribution is not None:
@@ -120,7 +120,13 @@ def plot_scatters(
     return ret_vals
 
 
-def plot_figure2_scatters(data_dir, format='pdf'):
+def plot_figure2_scatters(
+    data_dir,
+    format='pdf',
+    split_set='test',
+    train_frames='75',
+    model='baseline',
+):
 
     dataset_name = 'mirror-mouse'
     results_df_dir = os.path.join(data_dir, 'results_dataframes')
@@ -138,9 +144,6 @@ def plot_figure2_scatters(data_dir, format='pdf'):
         'paw3RF_bot', 'paw4RH_bot', 'tailBase_bot', 'tailMid_bot', 'nose_bot',
     )
 
-    split_set = 'test'
-    train_frames = '75'
-    model = 'baseline'
     labels_fontsize = 10
 
     # ---------------------------------------------------
@@ -227,10 +230,7 @@ def plot_figure2_scatters(data_dir, format='pdf'):
     plt.suptitle(f'{dataset_name} dataset', fontsize=14)
     fig_dir = os.path.join(data_dir, 'figures')
     os.makedirs(fig_dir, exist_ok=True)
-    plt.savefig(
-        os.path.join(fig_dir, f'fig2_loss_vs_pix_error_scatters.{format}'),
-        dpi=300,
-    )
+    plt.savefig(os.path.join(fig_dir, f'fig2_loss_vs_pix_error_scatters.{format}'), dpi=300)
     plt.close()
 
 
