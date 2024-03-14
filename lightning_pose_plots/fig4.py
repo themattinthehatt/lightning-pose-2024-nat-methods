@@ -603,8 +603,8 @@ def plot_figure4_all_panels(
     # cleanup
     # ----------------------------------------------------------------
     plt.suptitle(f'{dataset_name} dataset', fontsize=labels_fontsize + 2)
-    os.makedirs(os.path.dirname(save_dir), exist_ok=True)
-    plt.savefig(save_dir, dpi=300)
+    os.makedirs(os.path.dirname(save_file), exist_ok=True)
+    plt.savefig(save_file, dpi=300)
     plt.close()
 
 
