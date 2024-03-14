@@ -41,12 +41,7 @@ and install the package and dependencies:
 pip install -e .
 ```
 
-The installation takes about 5 min on a standard desktop computer.
-
-In a Python console, test if you can import functions:
-```python
-from lightning_pose_plots import utilities
-```
+The installation takes about 5 minutes on a standard desktop computer.
 
 ## Download figshare data
 You will need to select a folder where the data and results are stored, referred to as `data_dir`
