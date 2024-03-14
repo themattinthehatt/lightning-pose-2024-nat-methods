@@ -1,4 +1,7 @@
 # lightning-pose-2024-nat-methods
+
+[![DOI](https://zenodo.org/badge/764385684.svg)](https://zenodo.org/doi/10.5281/zenodo.10819529)
+
 This repository provides code to rerproduce the figures in the manuscript [Biderman, Whiteway et al, 2024](https://www.biorxiv.org/content/10.1101/2023.04.28.538703v1).
 
 ## Dependencies
