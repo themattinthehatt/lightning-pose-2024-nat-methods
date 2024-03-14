@@ -30,21 +30,24 @@ def plot_box(ax, df, y, ylabel, fontsize_label=10, logy=False):
     cleanaxis(ax)
 
 
-def plot_figure5_pupil(data_dir, format='pdf'):
+def plot_figure5_pupil(
+    save_file,
+    data_dir,
+    n_skip_scatter=2,  # scatter on frame
+    n_skip_scatter_r=10,  # vert vs horiz scatter
+):
 
     # ---------------------------------------------------
     # define analysis parameters
     # ---------------------------------------------------
-    keypoint_names = dataset_info['ibl-pupil']['keypoints']
     labels_fontsize = 10
+    keypoint_names = dataset_info['ibl-pupil']['keypoints']
     colors = {
         'pupil_bottom_r': '#AB63FA',
         'pupil_left_r': '#FFA15A',
         'pupil_right_r': '#19D3F3',
         'pupil_top_r': '#FF6692',
     }
-    n_skip_scatter = 2  # scatter on frame
-    n_skip_scatter2 = 10  # vert vs horiz / cca scatter
 
     # ---------------------------------------------------
     # load data
@@ -100,8 +103,8 @@ def plot_figure5_pupil(data_dir, format='pdf'):
 
         # left/right vs top/bottom pupil diameters
         ax = fig.add_subplot(gs[1, idx])
-        x = info['data']['diam_lr'][::n_skip_scatter2]
-        y = info['data']['diam_tb'][::n_skip_scatter2]
+        x = info['data']['diam_lr'][::n_skip_scatter_r]
+        y = info['data']['diam_tb'][::n_skip_scatter_r]
         if tracker == 'lp+ks':
             xy = pd.DataFrame({
                 'horz': x + 0.1 * np.random.randn(x.shape[0]),
@@ -110,11 +113,13 @@ def plot_figure5_pupil(data_dir, format='pdf'):
         else:
             xy = pd.DataFrame({'horz': x, 'vert': y})
         sns.kdeplot(
-            data=xy, x='horz', y='vert', fill=True, bw_adjust=0.75, ax=ax, color='gray')
+            data=xy, x='horz', y='vert', fill=True, bw_adjust=0.75, ax=ax, color='gray',
+        )
         r, _, lo, hi = info['data']['diam_corrs']
         ax.text(
-            0.05, 0.95, 'Pearson $r$ = %1.2f' % r, transform=ax.transAxes, va='top',
-            fontsize=labels_fontsize)
+            0.05, 0.95, 'Pearson $r$ = %1.2f' % r,
+            transform=ax.transAxes, va='top', fontsize=labels_fontsize,
+        )
         ax.set_xlabel('Horizontal diameter', fontsize=labels_fontsize)
         if idx == 0:
             ax.set_ylabel('Vertical diameter', fontsize=labels_fontsize)
@@ -141,8 +146,8 @@ def plot_figure5_pupil(data_dir, format='pdf'):
         if idx == 0:
             ax.set_ylabel('Normalized diameter (pix)', fontsize=labels_fontsize)
             ax.text(
-                0.27, 0.98, 'Reward delivery', transform=ax.transAxes, va='top',
-                fontsize=labels_fontsize,
+                0.27, 0.98, 'Reward delivery',
+                transform=ax.transAxes, va='top', fontsize=labels_fontsize,
             )
         cleanaxis(ax)
         ax.set_title('Trial consistency = %1.2f' % info['peth_snr'], fontsize=labels_fontsize)
@@ -164,14 +169,18 @@ def plot_figure5_pupil(data_dir, format='pdf'):
     # ----------------------------------------------------------------
     # cleanup
     # ----------------------------------------------------------------
-    plt.suptitle(f'ibl-pupil dataset', fontsize=labels_fontsize + 6)
-    fig_dir = os.path.join(data_dir, 'figures')
-    os.makedirs(fig_dir, exist_ok=True)
-    plt.savefig(os.path.join(fig_dir, f'fig5_ibl-pupil.{format}'), dpi=300)
+    plt.suptitle('ibl-pupil dataset', fontsize=labels_fontsize + 6)
+    os.makedirs(os.path.dirname(save_file), exist_ok=True)
+    plt.savefig(save_file, dpi=300)
     plt.close()
 
 
-def plot_figure5_paw(data_dir, format='pdf'):
+def plot_figure5_paw(
+    save_file,
+    data_dir,
+    n_skip_scatter=50,  # scatter on frame
+    n_skip_scatter_cca=10,  # cca scatter
+):
 
     # ---------------------------------------------------
     # define analysis parameters
@@ -182,8 +191,6 @@ def plot_figure5_paw(data_dir, format='pdf'):
         'paw_l': '#EF553B',
         'paw_r': '#00CC96',
     }
-    n_skip_scatter = 50  # scatter on frame
-    n_skip_scatter2 = 10  # cca scatter
 
     # ---------------------------------------------------
     # load data
@@ -212,7 +219,7 @@ def plot_figure5_paw(data_dir, format='pdf'):
     gs = fig.add_gridspec(
         4, 5, hspace=0.4, wspace=0.4,
         width_ratios=[1, 1, 1, 0.75, 0.75],
-        height_ratios=[1.2, 1, 1, 1]
+        height_ratios=[1.2, 1, 1, 1],
     )
 
     # -------------------------------------------------
@@ -253,26 +260,27 @@ def plot_figure5_paw(data_dir, format='pdf'):
                 color='w',
             )
             ax.set_title(
-                'LP+EKS' if tracker == 'lp+ks' else tracker.upper(),
-                fontsize=labels_fontsize,
+                'LP+EKS' if tracker == 'lp+ks' else tracker.upper(), fontsize=labels_fontsize,
             )
 
         # cca projections
         ax = fig.add_subplot(gs[1, idx])
-        x = info['data']['both']['lcam_cca0'][::n_skip_scatter2]
-        y = info['data']['both']['rcam_cca0'][::n_skip_scatter2]
+        x = info['data']['both']['lcam_cca0'][::n_skip_scatter_cca]
+        y = info['data']['both']['rcam_cca0'][::n_skip_scatter_cca]
         if tracker == 'lp+ks':
-            xy = pd.DataFrame(
-                {'left': x + 0.01 * np.random.randn(x.shape[0]),
-                 'right': y + 0.01 * np.random.randn(y.shape[0]), })
+            xy = pd.DataFrame({
+                'left': x + 0.01 * np.random.randn(x.shape[0]),
+                'right': y + 0.01 * np.random.randn(y.shape[0]),
+            })
         else:
             xy = pd.DataFrame({'left': x, 'right': y})
         sns.kdeplot(
             data=xy, x='left', y='right', fill=True, bw_adjust=0.75, ax=ax, color='gray')
         r, _, lo, hi = info['data']['both']['proj_corrs']
         ax.text(
-            0.05, 0.95, 'Pearson $r$ = %1.2f' % r, transform=ax.transAxes, va='top',
-            fontsize=labels_fontsize)
+            0.05, 0.95, 'Pearson $r$ = %1.2f' % r,
+            transform=ax.transAxes, va='top', fontsize=labels_fontsize,
+        )
         ax.set_xlabel('Left video CCA proj', fontsize=labels_fontsize)
         if idx == 0:
             ax.set_ylabel('Right video CCA proj', fontsize=labels_fontsize)
@@ -294,7 +302,8 @@ def plot_figure5_paw(data_dir, format='pdf'):
         trace_mean = np.nanmedian(traces_no_mean, axis=1)
         ci = 1.96 * np.nanstd(traces_no_mean, axis=1) / np.sqrt(traces_no_mean.shape[1])
         ax.fill_between(
-            data_['times'], trace_mean - ci, trace_mean + ci, color='k', alpha=0.25)
+            data_['times'], trace_mean - ci, trace_mean + ci, color='k', alpha=0.25,
+        )
         # plot peth
         ax.plot(data_['times'], trace_mean, c='k', label='correct trial')
         ax.axvline(x=0, label='Movement onset', linestyle='--', c='k')
@@ -307,11 +316,13 @@ def plot_figure5_paw(data_dir, format='pdf'):
         cleanaxis(ax)
         if idx == 1:
             ax.text(
-                0.27, 0.98, 'Movement onset', transform=ax.transAxes, va='top',
-                fontsize=labels_fontsize)
+                0.27, 0.98, 'Movement onset',
+                transform=ax.transAxes, va='top', fontsize=labels_fontsize,
+            )
         ax.set_title(
             'Trial consistency = %1.2f' % info['data'][view]['peth_snr'],
-            fontsize=labels_fontsize)
+            fontsize=labels_fontsize,
+        )
         ax.set_ylim([-20, 250])
 
     # -------------------------------------------------
@@ -328,7 +339,8 @@ def plot_figure5_paw(data_dir, format='pdf'):
             if df is None:
                 continue
             plot_box(
-                ax=ax, df=df[df.paw == paw], y=y, ylabel=ylabel, fontsize_label=labels_fontsize)
+                ax=ax, df=df[df.paw == paw], y=y, ylabel=ylabel, fontsize_label=labels_fontsize,
+            )
             if idx_p > 0:
                 ax.set_ylabel('')
             if idx == 1:
@@ -337,18 +349,25 @@ def plot_figure5_paw(data_dir, format='pdf'):
     # ----------------------------------------------------------------
     # cleanup
     # ----------------------------------------------------------------
-    plt.suptitle(f'ibl-paw dataset', fontsize=labels_fontsize + 6)
-    fig_dir = os.path.join(data_dir, 'figures')
-    os.makedirs(fig_dir, exist_ok=True)
-    plt.savefig(os.path.join(fig_dir, f'fig5_ibl-paw.{format}'), dpi=300)
+    plt.suptitle('ibl-paw dataset', fontsize=labels_fontsize + 6)
+    os.makedirs(os.path.dirname(save_file), exist_ok=True)
+    plt.savefig(save_file, dpi=300)
     plt.close()
 
 
-def plot_figure5(data_dir, dataset_name, format='pdf'):
+def plot_figure5(data_dir, save_dir, dataset_name, format='pdf'):
 
     if dataset_name == 'ibl-pupil':
-        plot_figure5_pupil(data_dir, format=format)
+        save_file = os.path.join(save_dir, f'fig5_ibl-pupil.{format}')
+        plot_figure5_pupil(
+            save_file=save_file,
+            data_dir=data_dir,
+        )
     elif dataset_name == 'ibl-paw':
-        plot_figure5_paw(data_dir, format=format)
+        save_file = os.path.join(save_dir, f'fig5_ibl-paw.{format}')
+        plot_figure5_paw(
+            save_file=save_file,
+            data_dir=data_dir,
+        )
     else:
         raise NotImplementedError(f'dataset {dataset_name} not in [ibl-pupil, ibl-paw]; skipping')

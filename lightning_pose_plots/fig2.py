@@ -34,7 +34,7 @@ def pearsonr_ci(x, y, alpha=0.05):
     """
     r, p = stats.pearsonr(x, y)
     r_z = np.arctanh(r)
-    se = 1 / np.sqrt(x.size-3)
+    se = 1 / np.sqrt(x.size - 3)
     z = stats.norm.ppf(1 - alpha / 2)
     lo_z, hi_z = r_z - z * se, r_z + z * se
     lo, hi = np.tanh((lo_z, hi_z))
@@ -61,8 +61,7 @@ def get_scatter_mask(
 
 def plot_scatters(
     df, metric_names, train_frames, split_set, distribution, model_types, keypoint, ax,
-    add_diagonal=False, add_trendline=False, markersize=None, alpha=0.25,
-    trendline_kwargs={},
+    add_diagonal=False, add_trendline=False, markersize=None, alpha=0.25, trendline_kwargs={},
 ):
     """Plot scatters using matplotlib, with option to add trendline."""
 
@@ -121,72 +120,14 @@ def plot_scatters(
 
 
 def plot_figure2_scatters(
-    data_dir,
-    format='pdf',
+    save_file,
+    df_labeled_metrics,
     split_set='test',
     train_frames='75',
     model='baseline',
 ):
 
-    dataset_name = 'mirror-mouse'
-    results_df_dir = os.path.join(data_dir, 'results_dataframes')
-
-    # ---------------------------------------------------
-    # define analysis parameters
-    # ---------------------------------------------------
-    # define which keypoints to analyze
-    cols_to_drop = [
-        'obs_top', 'obsHigh_bot', 'obsLow_bot',
-    ]
-    cols_to_keep = (
-        'paw1LH_top', 'paw2LF_top', 'paw3RF_top', 'paw4RH_top', 'tailBase_top',
-        'tailMid_top', 'nose_top', 'paw1LH_bot', 'paw2LF_bot',
-        'paw3RF_bot', 'paw4RH_bot', 'tailBase_bot', 'tailMid_bot', 'nose_bot',
-    )
-
     labels_fontsize = 10
-
-    # ---------------------------------------------------
-    # load data
-    # ---------------------------------------------------
-    # load ground truth labels
-    df_ground_truth = pd.read_csv(
-        os.path.join(data_dir, dataset_name, 'labels_OOD.csv'),
-        index_col=0,
-        header=[1, 2],
-    )
-    # update relative paths in labeled data to match model results
-    df_ground_truth.index = [
-        p.replace('labeled-data_OOD/', 'labeled-data/') for p in df_ground_truth.index
-    ]
-
-    # load model predictions on both labeled frames and unlabeled videos
-    _, df_labeled_metrics, _, _ = load_results_dataframes(
-        results_df_dir=results_df_dir,
-        dataset_name=dataset_name,
-    )
-    # add temporal norm
-    df_labeled_metrics = pd.concat([
-        df_labeled_metrics,
-        pd.read_parquet(
-            os.path.join(results_df_dir, f'{dataset_name}_labeled_metrics_temporal_lp.pqt'))
-    ])
-
-    # drop keypoints
-    df_ground_truth = df_ground_truth.drop(columns=cols_to_drop)
-    df_labeled_metrics = df_labeled_metrics.drop(columns=cols_to_drop)
-    # recompute means
-    if len(cols_to_keep) > 0:
-        df_labeled_metrics.loc[:, 'mean'] = df_labeled_metrics.loc[:, cols_to_keep].mean(axis=1)
-
-    # only keep frames with all keypoints labeled
-    # when a body part’s label is missing we cannot compute the pixel error but can still compute
-    # PCA losses over the predictions.
-    # when the predictions are wrong, the PCA loss can be very high without being reflected in the
-    # pixel error.
-    # we thus compute the correlations only for frames with fully visible frames.
-    index_to_keep = df_ground_truth[df_ground_truth.isna().sum(axis=1) == 0].index
-    df_labeled_metrics_clean = df_labeled_metrics[df_labeled_metrics.index.isin(index_to_keep)]
 
     # ---------------------------------------------------
     # plot
@@ -206,7 +147,7 @@ def plot_figure2_scatters(
     for i, (metric_name, ax_title) in enumerate(plots.items()):
         ax = fig.add_subplot(gs2[0, i])
         r_val, p_val, lo, hi = plot_scatters(
-            df=df_labeled_metrics_clean,
+            df=df_labeled_metrics,
             metric_names=['pixel_error', metric_name],
             train_frames=train_frames, split_set=split_set, distribution='OOD',
             model_types=[model, model],
@@ -227,14 +168,16 @@ def plot_figure2_scatters(
     # ----------------------------------------------------------------
     # cleanup
     # ----------------------------------------------------------------
-    plt.suptitle(f'{dataset_name} dataset', fontsize=14)
-    fig_dir = os.path.join(data_dir, 'figures')
-    os.makedirs(fig_dir, exist_ok=True)
-    plt.savefig(os.path.join(fig_dir, f'fig2_loss_vs_pix_error_scatters.{format}'), dpi=300)
+    os.makedirs(os.path.dirname(save_file), exist_ok=True)
+    plt.savefig(save_file, dpi=300)
     plt.close()
 
 
-def plot_figure2_pca(data_dir, format='pdf'):
+def plot_figure2_pca(
+    save_dir,
+    data_dir,
+    format,
+):
 
     # loop over pca loss types
     for loss_type in ['pca_singleview', 'pca_multiview']:
@@ -298,7 +241,7 @@ def plot_figure2_pca(data_dir, format='pdf'):
             plt.plot(
                 xrange, var_explained[dataset_name],
                 label=label,
-                marker='o', linewidth=2, markersize=4
+                marker='o', linewidth=2, markersize=4,
             )
 
         if loss_type == 'pca_singleview':
@@ -312,7 +255,7 @@ def plot_figure2_pca(data_dir, format='pdf'):
             y=fraction_to_keep,
             xmin=xmin,
             xmax=xmax,
-            color='black', linestyles='dashed', linewidth=2
+            color='black', linestyles='dashed', linewidth=2,
         )
         plt.text(textx, texty, '0.99', fontsize=14)
 
@@ -328,19 +271,72 @@ def plot_figure2_pca(data_dir, format='pdf'):
         # ----------------------------------------------------------------
         # cleanup
         # ----------------------------------------------------------------
-        fig_dir = os.path.join(data_dir, 'figures')
-        os.makedirs(fig_dir, exist_ok=True)
+        os.makedirs(save_dir, exist_ok=True)
         plt.savefig(
-            os.path.join(fig_dir, f'fig2_{loss_type}_cumulative_variance.{format}'),
-            dpi=300,
+            os.path.join(save_dir, f'fig2_{loss_type}_cumulative_variance.{format}'), dpi=300,
         )
         plt.close()
 
 
-def plot_figure2(data_dir, format='pdf'):
+def plot_figure2(data_dir, save_dir, format='pdf'):
 
+    # ----------------------------------------------------------------
     # plot metric vs pixel error scatters
-    plot_figure2_scatters(data_dir=data_dir, format=format)
+    # ----------------------------------------------------------------
+    dataset_name = 'mirror-mouse'
+    cols_to_keep = (
+        'paw1LH_top', 'paw2LF_top', 'paw3RF_top', 'paw4RH_top', 'tailBase_top',
+        'tailMid_top', 'nose_top', 'paw1LH_bot', 'paw2LF_bot',
+        'paw3RF_bot', 'paw4RH_bot', 'tailBase_bot', 'tailMid_bot', 'nose_bot',
+    )
+    cols_to_drop = [
+        'obs_top', 'obsHigh_bot', 'obsLow_bot',
+    ]
+    results_df_dir = os.path.join(data_dir, 'results_dataframes')
+    # load ground truth labels
+    df_ground_truth = pd.read_csv(
+        os.path.join(data_dir, dataset_name, 'labels_OOD.csv'), index_col=0, header=[1, 2],
+    )
+    # update relative paths in labeled data to match model results
+    df_ground_truth.index = [
+        p.replace('labeled-data_OOD/', 'labeled-data/') for p in df_ground_truth.index
+    ]
+    # load model predictions on both labeled frames and unlabeled videos
+    _, df_labeled_metrics, _, _ = load_results_dataframes(
+        results_df_dir=results_df_dir,
+        dataset_name=dataset_name,
+    )
+    # add temporal norm
+    df_labeled_metrics = pd.concat([
+        df_labeled_metrics,
+        pd.read_parquet(
+            os.path.join(results_df_dir, f'{dataset_name}_labeled_metrics_temporal_lp.pqt'))
+    ])
+    # drop keypoints
+    df_ground_truth = df_ground_truth.drop(columns=cols_to_drop)
+    df_labeled_metrics = df_labeled_metrics.drop(columns=cols_to_drop)
+    # recompute means
+    if len(cols_to_keep) > 0:
+        df_labeled_metrics.loc[:, 'mean'] = df_labeled_metrics.loc[:, cols_to_keep].mean(axis=1)
+    # only keep frames with all keypoints labeled
+    # when a body part’s label is missing we cannot compute the pixel error but can still compute
+    # PCA losses over the predictions.
+    # when the predictions are wrong, the PCA loss can be very high without being reflected in the
+    # pixel error.
+    # we thus compute the correlations only for frames with fully visible frames.
+    index_to_keep = df_ground_truth[df_ground_truth.isna().sum(axis=1) == 0].index
+    df_labeled_metrics_clean = df_labeled_metrics[df_labeled_metrics.index.isin(index_to_keep)]
+    save_file = os.path.join(save_dir, f'fig2_loss_vs_pix_error_scatters.{format}')
+    plot_figure2_scatters(
+        save_file=save_file,
+        df_labeled_metrics=df_labeled_metrics_clean,
+    )
 
+    # ----------------------------------------------------------------
     # plot cumulative var pca curves
-    plot_figure2_pca(data_dir=data_dir, format=format)
+    # ----------------------------------------------------------------
+    plot_figure2_pca(
+        save_dir=save_dir,
+        data_dir=data_dir,
+        format=format,
+    )

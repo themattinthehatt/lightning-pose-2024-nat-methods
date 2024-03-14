@@ -6,53 +6,21 @@ import os
 import pandas as pd
 import seaborn as sns
 
-from lightning_pose_plots import dataset_info
 from lightning_pose_plots.utilities import (
     cleanaxis,
     load_single_model_video_predictions_from_parquet,
 )
 
 
-def plot_figure1_traces(data_dir, format='pdf'):
-
-    from lightning_pose_plots import dataset_info_fig1_traces
-
-    # ----------------------------------------------------------------
-    # define analysis parameters
-    # ----------------------------------------------------------------
-    model_type = dataset_info_fig1_traces['model_type']
-    train_frames = dataset_info_fig1_traces['train_frames']
-    video_name = dataset_info_fig1_traces['video_name']
-    video_offset = dataset_info_fig1_traces['video_offset']
-    idxs = dataset_info_fig1_traces['idxs']
-    keypoint = dataset_info_fig1_traces['keypoint']
-    framerate_og = dataset_info_fig1_traces['framerate']
-
-    colors = ['tab:red', 'tab:blue', 'tab:green', 'tab:gray', 'tab:brown']
-    rng_seeds = ['0', '1', '2', '3', '4']
-
-    # ----------------------------------------------------------------
-    # load data
-    # ----------------------------------------------------------------
-    preds = {
-        'x-coord': [],
-        'y-coord': [],
-        'Conf': [],
-    }
-    df_path = os.path.join(data_dir, 'results_dataframes',
-                           f'mirror-mouse_video_preds_{model_type}.pqt')
-    for rng_seed in rng_seeds:
-        xs, ys, ls, marker_names = load_single_model_video_predictions_from_parquet(
-            filepath=df_path,
-            video_name=video_name,
-            rng_seed_data_pt=rng_seed,
-            train_frames=train_frames,
-            model_type=model_type,
-        )
-        kp_idx = np.where(np.array(marker_names) == keypoint)[0]
-        preds['x-coord'].append(xs[:, kp_idx])
-        preds['y-coord'].append(ys[:, kp_idx])
-        preds['Conf'].append(ls[:, kp_idx])
+def plot_figure1_traces(
+    save_file,
+    preds,
+    video_offset,
+    idxs,
+    keypoint,
+    framerate_og,
+    colors=['tab:red', 'tab:blue', 'tab:green', 'tab:gray', 'tab:brown'],
+):
 
     # ----------------------------------------------------------------
     # plot
@@ -87,26 +55,27 @@ def plot_figure1_traces(data_dir, format='pdf'):
     # ----------------------------------------------------------------
     # cleanup
     # ----------------------------------------------------------------
-    fig_dir = os.path.join(data_dir, 'figures')
-    os.makedirs(fig_dir, exist_ok=True)
-    plt.savefig(os.path.join(fig_dir, f'fig1b_traces.{format}'), dpi=300)
+    os.makedirs(os.path.dirname(save_file), exist_ok=True)
+    plt.savefig(save_file, dpi=300)
     plt.close()
 
 
-def plot_figure1_sample_efficiency(data_dir, format='pdf'):
+def plot_figure1_sample_efficiency(
+    save_file,
+    data_dir,
+    dataset_info,
+    skeletons,
+):
 
-    from lightning_pose_plots import dataset_info_fig1_sample_efficiency
-
-    fig = plt.figure(figsize=(2.4 * len(dataset_info_fig1_sample_efficiency), 6))
+    fig = plt.figure(figsize=(2.4 * len(dataset_info), 6))
     gs = gridspec.GridSpec(
-        4, len(dataset_info_fig1_sample_efficiency),
-        figure=fig, wspace=0.2, hspace=0.1, height_ratios=[0.3, 0.8, 0.8, 1],
+        4, len(dataset_info), figure=fig, wspace=0.2, hspace=0.1, height_ratios=[0.3, 0.8, 0.8, 1],
     )
 
     color = [250 / 255, 229 / 255, 64 / 255]
     colors_tab10 = sns.color_palette('tab10')
 
-    for d, (dataset_name, info) in enumerate(dataset_info_fig1_sample_efficiency.items()):
+    for d, (dataset_name, info) in enumerate(dataset_info.items()):
 
         c = 0  # axis index
 
@@ -143,13 +112,15 @@ def plot_figure1_sample_efficiency(data_dir, format='pdf'):
             plt.plot(markers[:, 0], markers[:, 1], '.', markersize=info['markersize'], color=color)
 
             # skeleton
-            skeleton = dataset_info[dataset_name]['skeleton']
+            skeleton = skeletons[dataset_name]['skeleton']
             if len(skeleton) > 0:
                 for s in skeleton:
                     i0 = np.where(kps == s[0])[0][0]
                     i1 = np.where(kps == s[1])[0][0]
-                    ax.plot([markers[i0, 0], markers[i1, 0]], [markers[i0, 1], markers[i1, 1]],
-                            '-', color=color, linewidth=1)
+                    ax.plot(
+                        [markers[i0, 0], markers[i1, 0]], [markers[i0, 1], markers[i1, 1]],
+                        '-', color=color, linewidth=1,
+                    )
             c += 1
 
         # -----------------------------
@@ -162,7 +133,8 @@ def plot_figure1_sample_efficiency(data_dir, format='pdf'):
         df = pd.read_parquet(data_path)
         # take mean over labeled frames
         df = df.groupby(
-            ['set', 'distribution', 'train_frames', 'rng_seed_data_pt']).mean().reset_index()
+            ['set', 'distribution', 'train_frames', 'rng_seed_data_pt']
+        ).mean().reset_index()
         train_frames_list = np.sort([int(t) for t in df.train_frames.unique()])
 
         sns.lineplot(
@@ -190,16 +162,54 @@ def plot_figure1_sample_efficiency(data_dir, format='pdf'):
     # ----------------------------------------------------------------
     # cleanup
     # ----------------------------------------------------------------
-    fig_dir = os.path.join(data_dir, 'figures')
-    os.makedirs(fig_dir, exist_ok=True)
-    plt.savefig(os.path.join(fig_dir, f'fig1c_sample_efficiency.{format}'), dpi=300)
+    os.makedirs(os.path.dirname(save_file), exist_ok=True)
+    plt.savefig(save_file, dpi=300)
     plt.close()
 
 
-def plot_figure1(data_dir, format='pdf'):
+def plot_figure1(data_dir, save_dir, format='pdf'):
 
+    # ----------------------------------------------------------------
     # plot traces from multiple models
-    plot_figure1_traces(data_dir=data_dir, format=format)
+    # ----------------------------------------------------------------
+    from lightning_pose_plots import dataset_info_fig1_traces
+    # load data
+    keypoint = dataset_info_fig1_traces['keypoint']
+    model_type = dataset_info_fig1_traces['model_type']
+    df_path = os.path.join(
+        data_dir, 'results_dataframes', f'mirror-mouse_video_preds_{model_type}.pqt')
+    preds = {'x-coord': [], 'y-coord': [], 'Conf': []}
+    for rng_seed in dataset_info_fig1_traces['rng_seeds']:
+        xs, ys, ls, marker_names = load_single_model_video_predictions_from_parquet(
+            filepath=df_path,
+            video_name=dataset_info_fig1_traces['video_name'],
+            rng_seed_data_pt=rng_seed,
+            train_frames=dataset_info_fig1_traces['train_frames'],
+            model_type=model_type,
+        )
+        kp_idx = np.where(np.array(marker_names) == keypoint)[0]
+        preds['x-coord'].append(xs[:, kp_idx])
+        preds['y-coord'].append(ys[:, kp_idx])
+        preds['Conf'].append(ls[:, kp_idx])
+    # plot
+    save_file = os.path.join(save_dir, f'fig1b_traces.{format}')
+    plot_figure1_traces(
+        save_file=save_file,
+        preds=preds,
+        video_offset=dataset_info_fig1_traces['video_offset'],
+        idxs=dataset_info_fig1_traces['idxs'],
+        keypoint=keypoint,
+        framerate_og=dataset_info_fig1_traces['framerate'],
+    )
 
+    # ----------------------------------------------------------------
     # plot sample efficiency curves
-    plot_figure1_sample_efficiency(data_dir=data_dir, format=format)
+    # ----------------------------------------------------------------
+    from lightning_pose_plots import dataset_info, dataset_info_fig1_sample_efficiency
+    save_file = os.path.join(save_dir, f'fig1c_sample_efficiency.{format}')
+    plot_figure1_sample_efficiency(
+        save_file=save_file,
+        data_dir=data_dir,
+        dataset_info=dataset_info_fig1_sample_efficiency,
+        skeletons=dataset_info,
+    )

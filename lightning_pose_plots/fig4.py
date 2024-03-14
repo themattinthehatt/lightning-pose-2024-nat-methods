@@ -159,14 +159,14 @@ def compute_ensemble_var_for_each_metric(
         for train_frame_ in train_frames:
             # mask predictions
             mask1 = (
-                    (df_video_preds.video_name == video_name_)
-                    & (df_video_preds.train_frames == train_frame_)
+                (df_video_preds.video_name == video_name_)
+                & (df_video_preds.train_frames == train_frame_)
             )
             df_tmp1 = df_video_preds[mask1]
             # mask metrics
             mask1b = (
-                    (df_video_metrics.video_name == video_name_)
-                    & (df_video_metrics.train_frames == train_frame_)
+                (df_video_metrics.video_name == video_name_)
+                & (df_video_metrics.train_frames == train_frame_)
             )
             df_tmp1b = df_video_metrics[mask1b]
             # compute ensemble variance over all models
@@ -207,70 +207,32 @@ def compute_ensemble_var_for_each_metric(
     return df_w_vars_vids
 
 
-def plot_figure4(
-    data_dir,
+def plot_figure4_all_panels(
+    save_file,
     dataset_name,
-    format='pdf',
+    vid_file,
+    df_ground_truth,
+    df_labeled_preds,
+    df_labeled_metrics,
+    df_video_preds,
+    df_video_metrics,
+    train_frames,
+    vid_name,
+    frames_offset,
+    keypoint,
+    time_window,
+    time_window_frames,
+    train_frames_list,
+    train_frames_list_actual,
+    std_vals,
+    yticks,
     rng_seed='0',
     models_to_compare=['baseline', 'semi-super context'],
 ):
 
     labels_fontsize = 10
 
-    # ---------------------------------------------------
-    # define analysis parameters
-    # ---------------------------------------------------
-    train_frames = dataset_info_fig4[dataset_name]['train_frames']
-    cols_to_drop = dataset_info_fig4[dataset_name]['cols_to_drop']
-    cols_to_keep = dataset_info_fig4[dataset_name]['cols_to_keep']
-    vid_name = dataset_info_fig4[dataset_name]['vid_name']
-    vid_name_load = dataset_info_fig4[dataset_name]['vid_name_load']
-    frames_offset = dataset_info_fig4[dataset_name]['frames_offset']
-    keypoint = dataset_info_fig4[dataset_name]['keypoint']
-    time_window = dataset_info_fig4[dataset_name]['time_window_tr']
-    time_window_frames = dataset_info_fig4[dataset_name]['time_window_fr']
-    train_frames_list = dataset_info_fig4[dataset_name]['train_frames_list']
-    train_frames_list_actual = dataset_info_fig4[dataset_name]['train_frames_actual']
-    std_vals = dataset_info_fig4[dataset_name]['std_vals']
-    yticks = dataset_info_fig4[dataset_name]['yticks']
-
-    # ---------------------------------------------------
-    # load data
-    # ---------------------------------------------------
-    vid_dir = os.path.join(data_dir, dataset_name, 'videos_OOD')
-    vid_file = os.path.join(vid_dir, f'{vid_name_load}.mp4')
-    cap = cv2.VideoCapture(vid_file)
-
-    # load ground truth labels
-    df_ground_truth = pd.read_csv(
-        os.path.join(data_dir, dataset_name, 'labels_OOD.csv'),
-        index_col=0,
-        header=[1, 2],
-    )
-    # update relative paths in labeled data to match model results
-    df_ground_truth.index = [
-        p.replace('labeled-data_OOD/', 'labeled-data/') for p in df_ground_truth.index
-    ]
     keypoint_names = df_ground_truth.columns.get_level_values(0)
-
-    # load model predictions on both labeled frames and unlabeled videos
-    df_labeled_preds, df_labeled_metrics, df_video_preds, df_video_metrics = \
-        load_results_dataframes(
-            results_df_dir=os.path.join(data_dir, 'results_dataframes'),
-            dataset_name=dataset_name,
-        )
-
-    # drop keypoints
-    df_ground_truth = df_ground_truth.drop(columns=cols_to_drop)
-    df_labeled_preds = df_labeled_preds.drop(columns=cols_to_drop)
-    df_labeled_metrics = df_labeled_metrics.drop(columns=cols_to_drop)
-    df_video_preds = df_video_preds.drop(columns=cols_to_drop)
-    df_video_metrics = df_video_metrics.drop(columns=cols_to_drop)
-    # recompute means
-    if len(cols_to_keep) > 0:
-        df_video_metrics.loc[:, 'mean'] = df_video_metrics.loc[:, cols_to_keep].mean(axis=1)
-        df_labeled_metrics.loc[:, 'mean'] = df_labeled_metrics.loc[:, cols_to_keep].mean(axis=1)
-
     metric_names = df_video_metrics.metric.unique()
     video_names = df_video_metrics[df_video_metrics.model_type == 'baseline'].video_name.unique()
     rng_seeds = df_video_metrics.rng_seed_data_pt.unique()
@@ -432,6 +394,7 @@ def plot_figure4(
     # ----------------------------------------------------------------
     # frames examples
     # ----------------------------------------------------------------
+    cap = cv2.VideoCapture(vid_file)
     n_frames = time_window_frames[1] - time_window_frames[0]
     gs10 = gridspec.GridSpecFromSubplotSpec(1, n_frames, subplot_spec=gs0[1, 0], wspace=0.05)
     for i, idx_time in enumerate(np.arange(time_window_frames[0], time_window_frames[1])):
@@ -475,6 +438,7 @@ def plot_figure4(
         ax.set_xticks([])
         ax.set_yticks([])
         ax.set_xlabel('Frame %i' % idx_time, fontsize=labels_fontsize)
+    cap.release()
 
     # ----------------------------------------------------------------
     # pixel error vs ensemble variance
@@ -577,7 +541,7 @@ def plot_figure4(
                 data=df_line_vids[
                     (df_line_vids.train_frames == train_frame)
                     & (df_line_vids.metric == metric_name)
-                    ],
+                ],
                 ax=ax,
                 errorbar='se',
                 legend=None,
@@ -639,7 +603,72 @@ def plot_figure4(
     # cleanup
     # ----------------------------------------------------------------
     plt.suptitle(f'{dataset_name} dataset', fontsize=labels_fontsize + 2)
-    fig_dir = os.path.join(data_dir, 'figures')
-    os.makedirs(fig_dir, exist_ok=True)
-    plt.savefig(os.path.join(fig_dir, f'fig4_{dataset_name}.{format}'), dpi=300)
+    os.makedirs(os.path.dirname(save_dir), exist_ok=True)
+    plt.savefig(save_dir, dpi=300)
     plt.close()
+
+
+def plot_figure4(data_dir, save_dir, dataset_name, format):
+
+    # ----------------------------------------------------------------
+    # load data
+    # ----------------------------------------------------------------
+    vid_name_load = dataset_info_fig4[dataset_name]['vid_name_load']
+    vid_file = os.path.join(data_dir, dataset_name, 'videos_OOD', f'{vid_name_load}.mp4')
+
+    # load ground truth labels
+    df_ground_truth = pd.read_csv(
+        os.path.join(data_dir, dataset_name, 'labels_OOD.csv'),
+        index_col=0,
+        header=[1, 2],
+    )
+    # update relative paths in labeled data to match model results
+    df_ground_truth.index = [
+        p.replace('labeled-data_OOD/', 'labeled-data/') for p in df_ground_truth.index
+    ]
+
+    # load model predictions on both labeled frames and unlabeled videos
+    df_labeled_preds, df_labeled_metrics, df_video_preds, df_video_metrics = \
+        load_results_dataframes(
+            results_df_dir=os.path.join(data_dir, 'results_dataframes'),
+            dataset_name=dataset_name,
+        )
+
+    # drop keypoints
+    cols_to_drop = dataset_info_fig4[dataset_name]['cols_to_drop']
+    cols_to_keep = dataset_info_fig4[dataset_name]['cols_to_keep']
+
+    df_ground_truth = df_ground_truth.drop(columns=cols_to_drop)
+    df_labeled_preds = df_labeled_preds.drop(columns=cols_to_drop)
+    df_labeled_metrics = df_labeled_metrics.drop(columns=cols_to_drop)
+    df_video_preds = df_video_preds.drop(columns=cols_to_drop)
+    df_video_metrics = df_video_metrics.drop(columns=cols_to_drop)
+    # recompute means
+    if len(cols_to_keep) > 0:
+        df_video_metrics.loc[:, 'mean'] = df_video_metrics.loc[:, cols_to_keep].mean(axis=1)
+        df_labeled_metrics.loc[:, 'mean'] = df_labeled_metrics.loc[:, cols_to_keep].mean(axis=1)
+
+    # ----------------------------------------------------------------
+    # plot
+    # ----------------------------------------------------------------
+    save_file = os.path.join(save_dir, f'fig4_{dataset_name}.{format}')
+    plot_figure4_all_panels(
+        save_file=save_file,
+        dataset_name=dataset_name,
+        vid_file=vid_file,
+        df_ground_truth=df_ground_truth,
+        df_labeled_preds=df_labeled_preds,
+        df_labeled_metrics=df_labeled_metrics,
+        df_video_preds=df_video_preds,
+        df_video_metrics=df_video_metrics,
+        train_frames=dataset_info_fig4[dataset_name]['train_frames'],
+        vid_name=dataset_info_fig4[dataset_name]['vid_name'],
+        frames_offset=dataset_info_fig4[dataset_name]['frames_offset'],
+        keypoint=dataset_info_fig4[dataset_name]['keypoint'],
+        time_window=dataset_info_fig4[dataset_name]['time_window_tr'],
+        time_window_frames=dataset_info_fig4[dataset_name]['time_window_fr'],
+        train_frames_list=dataset_info_fig4[dataset_name]['train_frames_list'],
+        train_frames_list_actual=dataset_info_fig4[dataset_name]['train_frames_actual'],
+        std_vals=dataset_info_fig4[dataset_name]['std_vals'],
+        yticks=dataset_info_fig4[dataset_name]['yticks'],
+    )

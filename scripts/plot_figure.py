@@ -1,4 +1,5 @@
 import argparse
+import os
 import warnings
 
 warnings.filterwarnings("ignore")
@@ -9,11 +10,15 @@ parser.add_argument('--figure', type=str)
 parser.add_argument('--dataset', default='mirror-mouse', type=str)
 parser.add_argument('--format', default='png', type=str)
 
+# extract command line args
 args = parser.parse_args()
 data_dir = args.data_dir
 figure = args.figure
 dataset = args.dataset
 format = args.format
+
+# define where figures are saved
+save_dir = os.path.join(data_dir, 'figures')
 
 non_ibl_datasets = ['mirror-mouse', 'mirror-fish', 'crim13']
 ibl_datasets = ['ibl-pupil', 'ibl-paw']
@@ -32,13 +37,13 @@ else:
 if figure == '1' or figure == 'all':
     from lightning_pose_plots.fig1 import plot_figure1
     print('plotting figure 1...', end='', flush=True)
-    plot_figure1(data_dir=data_dir, format=format)
+    plot_figure1(data_dir=data_dir, save_dir=save_dir, format=format)
     print('done')
 
 if figure == '2' or figure == 'all':
     from lightning_pose_plots.fig2 import plot_figure2
     print('plotting figure 2...', end='', flush=True)
-    plot_figure2(data_dir=data_dir, format=format)
+    plot_figure2(data_dir=data_dir, save_dir=save_dir, format=format)
     print('done')
 
 if figure == '3' or figure == 'all':
@@ -51,7 +56,9 @@ if figure == '3' or figure == 'all':
             f'plotting figure 3 for {dataset_name}; this will take some time...',
             end='', flush=True,
         )
-        plot_figure3(data_dir=data_dir, dataset_name=dataset_name, format=format)
+        plot_figure3(
+            data_dir=data_dir, save_dir=save_dir, dataset_name=dataset_name, format=format,
+        )
         print('done')
 
 if figure == '4' or figure == 'all':
@@ -64,7 +71,9 @@ if figure == '4' or figure == 'all':
             f'plotting figure 4 for {dataset_name}; this will take some time...',
             end='', flush=True,
         )
-        plot_figure4(data_dir=data_dir, dataset_name=dataset_name, format=format)
+        plot_figure4(
+            data_dir=data_dir, save_dir=save_dir, dataset_name=dataset_name, format=format,
+        )
         print('done')
 
 if figure == '5' or figure == 'all':
@@ -74,8 +83,10 @@ if figure == '5' or figure == 'all':
             print(f'dataset "{dataset_name}" not in {ibl_datasets}; skipping')
             continue
         print(f'plotting figure 5 for {dataset_name}...', end='', flush=True)
-        plot_figure5(data_dir=data_dir, dataset_name=dataset_name, format=format)
+        plot_figure5(
+            data_dir=data_dir, save_dir=save_dir, dataset_name=dataset_name, format=format,
+        )
         print('done')
 
-tend =time.time()
+tend = time.time()
 print(tend-tbeg)

@@ -36,7 +36,7 @@ def get_frames_from_idxs(cap, idxs):
             frames[fr, 0, :, :] = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         else:
             print(
-                'warning! reached end of video; returning blank frames for remainder of ' +
+                'warning! reached end of video; returning blank frames for remainder of '
                 'requested indices'
             )
             break

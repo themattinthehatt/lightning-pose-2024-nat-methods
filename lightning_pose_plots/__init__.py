@@ -223,6 +223,7 @@ dataset_info_fig1_traces = {
     'framerate': 250,                           # framerate of camera, to compute frames -> seconds
     'idxs': np.arange(500, 775),                # selected window to plot
     'keypoint': 'paw1LH_top',                   # selected keypoint to plot
+    'rng_seeds': ['0', '1', '2', '3', '4'],     # rng seeds to plot
 }
 
 
