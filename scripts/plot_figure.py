@@ -8,7 +8,7 @@ parser = argparse.ArgumentParser(description='Figure plotting')
 parser.add_argument('--data_dir', type=str)
 parser.add_argument('--figure', type=str)
 parser.add_argument('--dataset', default='mirror-mouse', type=str)
-parser.add_argument('--format', default='png', type=str)
+parser.add_argument('--format', default='pdf', type=str)
 
 # extract command line args
 args = parser.parse_args()
@@ -22,9 +22,6 @@ save_dir = os.path.join(data_dir, 'figures')
 
 non_ibl_datasets = ['mirror-mouse', 'mirror-fish', 'crim13']
 ibl_datasets = ['ibl-pupil', 'ibl-paw']
-
-import time
-tbeg = time.time()
 
 # if plotting all figures, plot all datasets as well
 if figure == 'all':
@@ -87,6 +84,3 @@ if figure == '5' or figure == 'all':
             data_dir=data_dir, save_dir=save_dir, dataset_name=dataset_name, format=format,
         )
         print('done')
-
-tend = time.time()
-print(tend-tbeg)

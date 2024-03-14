@@ -41,7 +41,7 @@ and install the package and dependencies:
 pip install -e .
 ```
 
-The installation takes about 5 minutes on a standard desktop computer.
+The installation takes less than a minute on a standard desktop computer.
 
 ## Download figshare data
 You will need to select a folder where the data and results are stored, referred to as `data_dir`
@@ -49,7 +49,7 @@ in this and the following command line calls
 (replace `/path/to/data` with a real path on your machine).
 The following command will download the labeled data and the results dataframes, which are together
 approximately 12GB.
-This will take 10-20 minutes depending on your download speed.
+This will take 20-30 minutes depending on your download speed.
 ```shell
 python scripts/download_data.py --data_dir=/path/to/data
 ```

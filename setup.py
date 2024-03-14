@@ -27,6 +27,7 @@ install_requires = [
     'numpy',
     'opencv-python-headless',
     'pandas>=2.0.0',
+    'pyarrow',
     'requests',
     'scikit-learn',
     'scipy',

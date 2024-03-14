@@ -23,7 +23,7 @@ datasets_url_dict = {
     'results_dataframes': 'https://figshare.com/ndownloader/files/45046165',
 }
 
-print('Downloading data - this will take 10-15 minutes depending on your download speed')
+print('Downloading data - this will take 20-30 minutes depending on your download speed')
 
 for dataset, url in datasets_url_dict.items():
 
