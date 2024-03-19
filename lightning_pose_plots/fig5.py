@@ -3,6 +3,7 @@ import os
 import pandas as pd
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
+from scipy.stats import wilcoxon
 import seaborn as sns
 
 from lightning_pose_plots import dataset_info
@@ -17,10 +18,12 @@ def plot_box(ax, df, y, ylabel, fontsize_label=10, logy=False):
         linewidth=2, width=0.3, ax=ax,
     )
     sns.scatterplot(x='tracker', y=y, data=df, s=3, color='k', alpha=1.0, ax=ax)
+    vals_all = []
     for eid in df.eid.unique():
         vals = df[df.eid == eid][y].to_numpy()
         vals = vals[~np.isnan(vals)]
         ax.plot([0, 1, 2], vals, 'k', alpha=0.3)
+        vals_all.append(vals)
     ax.set_xlabel('')
     ax.set_ylabel(ylabel, fontsize=fontsize_label)
     if logy:
@@ -28,6 +31,7 @@ def plot_box(ax, df, y, ylabel, fontsize_label=10, logy=False):
     ax.set_xticklabels(['DLC', 'LP', 'LP+EKS'])
     ax.tick_params(axis='both', which='major', labelsize=fontsize_label)
     cleanaxis(ax)
+    return np.array(vals_all)
 
 
 def plot_figure5_pupil(
@@ -164,7 +168,24 @@ def plot_figure5_pupil(
     ):
         ax = fig.add_subplot(gs[idx, 3])
         logy = True if y == 'trial_consistency' else False
-        plot_box(ax=ax, df=df, y=y, ylabel=ylabel, logy=logy, fontsize_label=labels_fontsize)
+        vals = plot_box(
+            ax=ax, df=df, y=y, ylabel=ylabel, logy=logy, fontsize_label=labels_fontsize,
+        )
+
+        # # print stats
+        # print(ylabel)
+        # s01 = wilcoxon(vals[:, 1], y=vals[:, 0], alternative='greater')
+        # s02 = wilcoxon(vals[:, 2], y=vals[:, 0], alternative='greater')
+        # s12 = wilcoxon(vals[:, 2], y=vals[:, 1], alternative='greater')
+        # means = np.nanmean(vals, axis=0)
+        # sems = np.nanstd(vals, axis=0) / np.sqrt(vals.shape[0])
+        # print(f'0: {round(means[0], 2)}+/-{round(sems[0], 2)}')
+        # print(f'1: {round(means[1], 2)}+/-{round(sems[1], 2)}')
+        # print(f'2: {round(means[2], 2)}+/-{round(sems[2], 2)}')
+        # print(f'0-1: p={s01.pvalue}')
+        # print(f'0-2: p={s02.pvalue}')
+        # print(f'1-2: p={s12.pvalue}')
+        # print()
 
     # ----------------------------------------------------------------
     # cleanup
@@ -178,7 +199,7 @@ def plot_figure5_pupil(
 def plot_figure5_paw(
     save_file,
     data_dir,
-    n_skip_scatter=50,  # scatter on frame
+    n_skip_scatter=100,  # scatter on frame
     n_skip_scatter_cca=10,  # cca scatter
 ):
 
@@ -338,13 +359,28 @@ def plot_figure5_paw(
             ax = fig.add_subplot(gs[idx, 3 + idx_p])
             if df is None:
                 continue
-            plot_box(
+            vals = plot_box(
                 ax=ax, df=df[df.paw == paw], y=y, ylabel=ylabel, fontsize_label=labels_fontsize,
             )
             if idx_p > 0:
                 ax.set_ylabel('')
             if idx == 1:
                 ax.set_title(f'{paw.capitalize()} paw')
+
+            # # print stats
+            # print(f'{paw}: {ylabel}')
+            # s01 = wilcoxon(vals[:, 1], y=vals[:, 0], alternative='greater')
+            # s02 = wilcoxon(vals[:, 2], y=vals[:, 0], alternative='greater')
+            # s12 = wilcoxon(vals[:, 2], y=vals[:, 1], alternative='greater')
+            # means = np.nanmean(vals, axis=0)
+            # sems = np.nanstd(vals, axis=0) / np.sqrt(vals.shape[0])
+            # print(f'0: {round(means[0], 2)}+/-{round(sems[0], 2)}')
+            # print(f'1: {round(means[1], 2)}+/-{round(sems[1], 2)}')
+            # print(f'2: {round(means[2], 2)}+/-{round(sems[2], 2)}')
+            # print(f'0-1: p={s01.pvalue}')
+            # print(f'0-2: p={s02.pvalue}')
+            # print(f'1-2: p={s12.pvalue}')
+            # print()
 
     # ----------------------------------------------------------------
     # cleanup
