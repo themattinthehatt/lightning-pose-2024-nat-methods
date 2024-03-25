@@ -6,6 +6,7 @@ import os
 import pandas as pd
 import seaborn as sns
 
+from lightning_pose_plots import dataset_info_fig1_traces
 from lightning_pose_plots.utilities import (
     cleanaxis,
     load_single_model_video_predictions_from_parquet,
@@ -172,7 +173,6 @@ def plot_figure1(data_dir, save_dir, format='pdf'):
     # ----------------------------------------------------------------
     # plot traces from multiple models
     # ----------------------------------------------------------------
-    from lightning_pose_plots import dataset_info_fig1_traces
     # load data
     keypoint = dataset_info_fig1_traces['keypoint']
     model_type = dataset_info_fig1_traces['model_type']

@@ -185,6 +185,85 @@ def format_data_for_pca(data, pca_type, dataset_name):
     return labels_array
 
 
+def compute_ensemble_variance(
+    df_ground_truth,
+    df_preds,
+    train_frames,
+    models,
+    rng_seeds,
+    split_set='test',
+    distribution='OOD',
+    sort_df=True,
+):
+    """
+
+    Parameters
+    ----------
+    df_ground_truth : pd.DataFrame
+        ground truth predictions
+    df_preds : pd.DataFrame
+        model predictions
+    train_frames : array-like
+        list of train_frame values to loop over
+    models : array-like
+        list of models to compute ensemble variance over
+    rng_seeds : array-like
+        list of rng seeds to compute ensemble variance over
+    split_set : str
+        train, val, test
+    distribution : str
+        InD, OOD
+    sort_df : bool
+
+    Returns
+    -------
+    np.ndarray
+        shape (n_frames, n_keypoints)
+
+    """
+    preds = []
+    for model in models:
+        mask = ((df_preds.set == split_set)
+                & (df_preds.distribution == distribution)
+                & (df_preds.train_frames == train_frames)
+                & (df_preds.model_type == model)
+                )
+        df_tmp = df_preds[mask]
+        for rng in rng_seeds:
+            df_tmp1 = df_tmp[df_tmp.rng_seed_data_pt == rng].drop(
+                columns=[
+                    'set', 'distribution', 'model_path', 'rng_seed_data_pt', 'train_frames',
+                    'model_type',
+                ]
+            )
+            if sort_df:
+                df_tmp1.sort_index(inplace=True)
+            assert np.all(df_tmp1.index == df_ground_truth.index)
+            # get rid of likelihood
+            arr = df_tmp1.to_numpy().reshape(df_tmp1.shape[0], -1, 3)[:, :, :2]
+            preds.append(arr[..., None])
+    preds = np.concatenate(preds, axis=3)
+    net_vars = np.std(preds, axis=-1).mean(axis=-1)
+    return net_vars
+
+
+def compute_percentiles(arr, std_vals, percentiles):
+    num_pts = arr[0]
+    vals = []
+    prctiles = []
+    for p in percentiles:
+        v = num_pts * p / 100
+        idx = np.argmin(np.abs(arr - v))
+        # maybe we don't have enough data
+        if idx == len(arr) - 1:
+            p_ = arr[idx] / num_pts * 100
+        else:
+            p_ = p
+        vals.append(std_vals[idx])
+        prctiles.append(p_)
+    return vals, prctiles
+
+
 def cleanaxis(ax):
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)

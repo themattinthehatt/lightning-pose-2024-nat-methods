@@ -24,12 +24,13 @@ non_ibl_datasets = ['mirror-mouse', 'mirror-fish', 'crim13']
 ibl_datasets = ['ibl-pupil', 'ibl-paw']
 
 # if plotting all figures, plot all datasets as well
-if figure == 'all':
+if figure == 'all' or dataset == 'all':
     dataset_list = non_ibl_datasets
     dataset_list_ibl = ibl_datasets
 else:
     dataset_list = [dataset]
     dataset_list_ibl = [dataset]
+
 
 if figure == '1' or figure == 'all':
     from lightning_pose_plots.fig1 import plot_figure1
@@ -75,12 +76,18 @@ if figure == '4' or figure == 'all':
 
 if figure == '5' or figure == 'all':
     from lightning_pose_plots.fig5 import plot_figure5
+    print('plotting figure 5...', end='', flush=True)
+    plot_figure5(data_dir=data_dir, save_dir=save_dir, format=format)
+    print('done')
+
+if figure == '6' or figure == 'all':
+    from lightning_pose_plots.fig6 import plot_figure6
     for dataset_name in dataset_list_ibl:
         if dataset_name not in ibl_datasets:
             print(f'dataset "{dataset_name}" not in {ibl_datasets}; skipping')
             continue
-        print(f'plotting figure 5 for {dataset_name}...', end='', flush=True)
-        plot_figure5(
+        print(f'plotting figure 6 for {dataset_name}...', end='', flush=True)
+        plot_figure6(
             data_dir=data_dir, save_dir=save_dir, dataset_name=dataset_name, format=format,
         )
         print('done')

@@ -400,7 +400,7 @@ dataset_info_fig3_metrics = {
 }
 
 
-# setting for Fig. 4
+# settings for Fig. 4
 dataset_info_fig4 = {
     'mirror-mouse': {
         # number of train frames for trace example in panel a
@@ -458,6 +458,29 @@ dataset_info_fig4 = {
 }
 
 
+# settings for Fig. 5
+dataset_info_fig5 = {
+    'dataset_name': 'mirror-mouse',
+    # compute metrics on a subset of keypoints
+    'cols_to_keep': (
+        'paw1LH_top', 'paw2LF_top', 'paw3RF_top', 'paw4RH_top',
+        'paw1LH_bot', 'paw2LF_bot', 'paw3RF_bot', 'paw4RH_bot',
+    ),
+    'cols_to_drop': [
+        'obs_top', 'obsHigh_bot', 'obsLow_bot',
+        'tailBase_top', 'tailMid_top', 'tailBase_bot', 'tailMid_bot',
+        'nose_top', 'nose_bot',
+    ],
+    'train_frames_list': ['75', '1'],      # 75 frames, 100% of all frames
+    'train_frames_actual': ['75', '631'],  # what these numbers actually correspond to
+    'std_vals': np.arange(0, 5, 0.1),      # ensemble standard deviation range
+    'vid_name': '180607_004',
+    'time_window': (3050, 3300),
+    'keypoint': 'paw1LH_bot',
+    'coord': 'x',
+}
+
+
 ibl_session_ids_pupil = [
     'cf43dbb1-6992-40ec-a5f9-e8e838d0f643',
     '5285c561-80da-4563-8694-739da92e5dd0',
@@ -475,7 +498,7 @@ ibl_session_ids_pupil = [
     '5bcafa14-71cb-42fa-8265-ce5cda1b89e0',
     '6364ff7f-6471-415a-ab9e-632a12052690',
     'eebacd5a-7dcd-4ba6-9dff-ec2a4d2f19e0',
-    'd0c91c3c-8cbb-4929-8657-31f18bffc294',  # example session in Fig. 5
+    'd0c91c3c-8cbb-4929-8657-31f18bffc294',  # example session in Fig. 6
     '30e5937e-e86a-47e6-93ae-d2ae3877ff8e',
     '931a70ae-90ee-448e-bedb-9d41f3eda647',
     '78b4fff5-c5ec-44d9-b5f9-d59493063f00',
@@ -533,7 +556,7 @@ ibl_session_ids_paw = [
     '91a3353a-2da1-420d-8c7c-fad2fedfdd18',
     '8ca740c5-e7fe-430a-aa10-e74e9c3cbbe8',
     'a405053a-eb13-4aa4-850c-5a337e5dc7fd',
-    '1b715600-0cbc-442c-bd00-5b0ac2865de1',  # example session in Fig. 5
+    '1b715600-0cbc-442c-bd00-5b0ac2865de1',  # example session in Fig. 6
     '158d5d35-a2ab-4a76-87b0-51048c5d5283',
     '7622da34-51b6-4661-98ae-a57d40806008',
     'e012d3e3-fdbc-4661-9ffa-5fa284e4e706',

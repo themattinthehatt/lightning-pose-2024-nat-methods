@@ -1,409 +1,494 @@
+import matplotlib.gridspec as gridspec
+import matplotlib.pyplot as plt
 import numpy as np
 import os
 import pandas as pd
-import matplotlib.gridspec as gridspec
-import matplotlib.pyplot as plt
-from scipy.stats import wilcoxon
+import pickle
 import seaborn as sns
 
-from lightning_pose_plots import dataset_info
-from lightning_pose_plots.utilities import cleanaxis
+from lightning_pose_plots import dataset_info_fig5
+from lightning_pose_plots.utilities import compute_ensemble_variance, compute_percentiles
 
 
-def plot_box(ax, df, y, ylabel, fontsize_label=10, logy=False):
-    ax = sns.boxplot(
-        x='tracker', y=y, data=df, fliersize=0,
-        medianprops=dict(color='red', alpha=1.0, linewidth=3),
-        boxprops=dict(facecolor='none', edgecolor='k'),
-        linewidth=2, width=0.3, ax=ax,
-    )
-    sns.scatterplot(x='tracker', y=y, data=df, s=3, color='k', alpha=1.0, ax=ax)
-    vals_all = []
-    for eid in df.eid.unique():
-        vals = df[df.eid == eid][y].to_numpy()
-        vals = vals[~np.isnan(vals)]
-        ax.plot([0, 1, 2], vals, 'k', alpha=0.3)
-        vals_all.append(vals)
-    ax.set_xlabel('')
-    ax.set_ylabel(ylabel, fontsize=fontsize_label)
-    if logy:
-        ax.set_yscale('log')
-    ax.set_xticklabels(['DLC', 'LP', 'LP+EKS'])
-    ax.tick_params(axis='both', which='major', labelsize=fontsize_label)
-    cleanaxis(ax)
-    return np.array(vals_all)
-
-
-def plot_figure5_pupil(
-    save_file,
-    data_dir,
-    n_skip_scatter=2,  # scatter on frame
-    n_skip_scatter_r=10,  # vert vs horiz scatter
+def compute_ensemble_var_for_each_pixel_error(
+    df_ground_truth,
+    df_labeled_preds,
+    df_labeled_metrics,
+    post_processors_dict,
+    train_frames,
+    models,
+    rng_seeds,
+    split_set='test',
+    distribution='OOD',
 ):
+    """
 
-    # ---------------------------------------------------
-    # define analysis parameters
-    # ---------------------------------------------------
-    labels_fontsize = 10
-    keypoint_names = dataset_info['ibl-pupil']['keypoints']
-    colors = {
-        'pupil_bottom_r': '#AB63FA',
-        'pupil_left_r': '#FFA15A',
-        'pupil_right_r': '#19D3F3',
-        'pupil_top_r': '#FF6692',
+    Parameters
+    ----------
+    df_ground_truth : pd.DataFrame
+        ground truth predictions
+    df_labeled_preds : pd.DataFrame
+        model predictions
+    df_labeled_metrics : pd.DataFrame
+        metrics computed on model predictions
+    post_processors_dict : dict
+        'processor': list of seeds
+    train_frames : array-like
+        list of train_frame values to loop over
+    models : array-like
+        list of models to compute ensemble variance over
+    rng_seeds : array-like
+        list of rng seeds to compute ensemble variance over
+    split_set : str
+        train, val, test
+    distribution : str
+        InD, OOD
+
+    Returns
+    -------
+    pd.DataFrame
+
+    """
+
+    df_w_vars = []
+
+    for train_frame_ in train_frames:
+        # compute ensemble variance on raw outputs
+        net_vars = compute_ensemble_variance(
+            df_ground_truth=df_ground_truth,
+            df_preds=df_labeled_preds,
+            train_frames=train_frame_,
+            models=models,
+            rng_seeds=rng_seeds,
+            split_set=split_set,
+            distribution=distribution,
+        )
+
+        dfs_all = {}
+        for model, rng_seeds_ in post_processors_dict.items():
+            for rng_seed in rng_seeds_:
+                mask = ((df_labeled_metrics.set == split_set)
+                        & (df_labeled_metrics.distribution == 'OOD')
+                        & (df_labeled_metrics.rng_seed_ensembling == model)
+                        & (df_labeled_metrics.rng_seed_data_pt == rng_seed)
+                        & (df_labeled_metrics.train_frames == train_frame_)
+                        & (df_labeled_metrics.metric == 'pixel_error')
+                        )
+                idx = f'{model}-{rng_seed}'
+                dfs_all[idx] = df_labeled_metrics[mask]
+                dfs_all[idx].sort_index(inplace=True)
+                assert np.all(dfs_all[idx].index == df_ground_truth.index)
+
+        for i, kp in enumerate(dfs_all['raw-0'].columns):
+            if kp in ['model_path', 'rng_seed_data_pt', 'train_frames', 'model_type', 'metric',
+                      'set', 'distribution', 'rng_seed_ensembling', 'mean']:
+                continue
+            for m in list(dfs_all.keys()):
+                df_w_vars.append(pd.DataFrame({
+                    'pixel_error': dfs_all[m][kp],
+                    'ens-std': net_vars[:, i],
+                    'keypoint': kp,
+                    'model': m,
+                    'train_frames': train_frame_,
+                }, index=df_ground_truth.index))
+
+    df_w_vars = pd.concat(df_w_vars)
+    return df_w_vars
+
+
+def compute_pixel_error_using_ensemble_std_dev_threshold(
+    df,
+    train_frames,
+    std_vals,
+):
+    models = df.model.unique()
+    n_points_dict = {
+        t: {m: np.nan * np.zeros_like(std_vals) for m in models} for t in train_frames
     }
+    df_line = []
+    for train_frame_ in train_frames:
+        dft = df[df.train_frames == train_frame_]
+        for s, std in enumerate(std_vals):
+            df_tmp_ = dft[dft['ens-std'] > std]
+            for i in models:
+                d = df_tmp_[df_tmp_.model == i]
+                n_points = np.sum(~d['pixel_error'].isna())
+                n_points_dict[train_frame_][i][s] = n_points
+                index = []
+                for row, k in zip(d.index, d['keypoint'].to_numpy()):
+                    index.append(row + f'_{i}_{s}_{train_frames}_{k}')
+                df_line.append(pd.DataFrame({
+                    'train_frames': train_frame_,
+                    'ens-std': std,
+                    'model': '-'.join(i.split('-')[:-1]),
+                    'rng_seed': i.split('-')[-1],
+                    'mean': d.pixel_error.to_numpy(),
+                    'n_points': n_points,
+                }, index=index))
+    df_line = pd.concat(df_line)
+    return df_line, n_points_dict
 
-    # ---------------------------------------------------
-    # load data
-    # ---------------------------------------------------
-    single_sess_path = os.path.join(
-        data_dir,
-        'results_dataframes',
-        'ibl-pupil_tracker_comparisons_d0c91c3c-8cbb-4929-8657-31f18bffc294.pkl'
-    )
-    single_sess_info = pd.read_pickle(single_sess_path)
 
-    tracker_metrics_path = os.path.join(
-        data_dir, 'results_dataframes', 'ibl-pupil_tracker_metrics.csv',
-    )
-    tracker_metrics_df = pd.read_csv(tracker_metrics_path)
+def plot_pixel_error_vs_ensemble_std_dev(
+    df_line,
+    colors,
+    axes,
+    train_frames_list,
+    train_frames_list_actual,
+    n_points_dict,
+    std_vals,
+    percentiles,
+):
+    for idx, (ax, tr, tr_real) in enumerate(
+            zip(axes, train_frames_list, train_frames_list_actual)
+    ):
+        g = sns.lineplot(
+            x='ens-std',
+            y='mean',
+            hue='model',
+            palette=colors,
+            data=df_line[df_line.train_frames == tr],
+            ax=ax,
+            errorbar='se',
+            legend=False,  # True if idx == 1 else False,
+        )
+        g.set(yscale='log')
+        g.set(yticks=[4.5, 10, 20, 30, 40, 50])
 
-    decoding_metrics_path = os.path.join(
-        data_dir, 'results_dataframes', 'ibl-pupil_decoding_metrics.csv',
-    )
-    decoding_metrics_df = pd.read_csv(decoding_metrics_path)
-
-    # ---------------------------------------------------
-    # plot figure
-    # ---------------------------------------------------
-    fig = plt.figure(constrained_layout=False, figsize=(12, 12))
-    gs = fig.add_gridspec(4, 4, hspace=0.4, wspace=0.4)
-
-    # ----------------------
-    # single session example
-    # ----------------------
-    trackers = ['dlc', 'lp', 'lp+ks']
-    for idx, tracker in enumerate(trackers):
-
-        info = single_sess_info[tracker]
-
-        # scatter keypoints on frame
-        ax = fig.add_subplot(gs[0, idx])
-        ax.imshow(info['frame'], cmap='gray', vmin=0, vmax=255)
-        for kp in keypoint_names:
-            ax.scatter(
-                info['data']['dlc_df'][f'{kp}_x'][::n_skip_scatter],
-                info['data']['dlc_df'][f'{kp}_y'][::n_skip_scatter],
-                alpha=0.5, s=0.01, label=kp, c=colors[kp],
+        vals, prctiles = compute_percentiles(
+            arr=n_points_dict[tr]['raw-0'],
+            std_vals=std_vals,
+            percentiles=percentiles,
+        )
+        for p, v in zip(prctiles, vals):
+            ax.axvline(v, ymax=0.95, linestyle='--', linewidth=0.5, color='k', zorder=-1)
+            ax.text(
+                v / np.diff(ax.get_xlim()), 0.95, str(round(p)) + '%',
+                transform=ax.transAxes,
+                ha='left',
             )
-        ax.set_xticks([])
-        ax.set_yticks([])
-        ax.set_xlim([0, info['frame'].shape[1]])
-        ax.set_ylim([info['frame'].shape[0], 0])
-        ax.set_title(
-            'LP+EKS' if tracker == 'lp+ks' else tracker.upper(),
-            fontsize=labels_fontsize,
-        )
-
-        # left/right vs top/bottom pupil diameters
-        ax = fig.add_subplot(gs[1, idx])
-        x = info['data']['diam_lr'][::n_skip_scatter_r]
-        y = info['data']['diam_tb'][::n_skip_scatter_r]
-        if tracker == 'lp+ks':
-            xy = pd.DataFrame({
-                'horz': x + 0.1 * np.random.randn(x.shape[0]),
-                'vert': y + 0.1 * np.random.randn(y.shape[0]),
-            })
-        else:
-            xy = pd.DataFrame({'horz': x, 'vert': y})
-        sns.kdeplot(
-            data=xy, x='horz', y='vert', fill=True, bw_adjust=0.75, ax=ax, color='gray',
-        )
-        r, _, lo, hi = info['data']['diam_corrs']
-        ax.text(
-            0.05, 0.95, 'Pearson $r$ = %1.2f' % r,
-            transform=ax.transAxes, va='top', fontsize=labels_fontsize,
-        )
-        ax.set_xlabel('Horizontal diameter', fontsize=labels_fontsize)
+        ax.set_title(f'{tr_real} train frames', fontsize=10)
         if idx == 0:
-            ax.set_ylabel('Vertical diameter', fontsize=labels_fontsize)
+            ax.set_ylabel('Pixel error', fontsize=10)
         else:
             ax.set_ylabel('')
-        cleanaxis(ax)
-        ax.set_aspect('equal')
-        ax.set_xlim([0, 30])
-        ax.set_ylim([0, 30])
-        ax.plot([2, 28], [2, 28], '-k', linewidth=0.25)
-
-        # traces/peth
-        ax = fig.add_subplot(gs[2, idx])
-        traces = info['correct_traces']
-        # plot individual traces per trial
-        traces_no_mean = traces - np.nanmedian(traces, axis=0)
-        ax.plot(info['times'], traces_no_mean[:, ::2], c='k', alpha=0.1)
-        # plot peth
-        trace_mean = np.nanmedian(traces_no_mean, axis=1)
-        ax.plot(info['times'], trace_mean, c='r', label='correct trial')
-        ax.axvline(x=0, label='Reward delivery', linestyle='--', c='k')
-        ax.set_xticks([-0.5, 0, 0.5, 1, 1.5])
-        ax.set_xlabel('Time (s)', fontsize=labels_fontsize)
-        if idx == 0:
-            ax.set_ylabel('Normalized diameter (pix)', fontsize=labels_fontsize)
-            ax.text(
-                0.27, 0.98, 'Reward delivery',
-                transform=ax.transAxes, va='top', fontsize=labels_fontsize,
-            )
-        cleanaxis(ax)
-        ax.set_title('Trial consistency = %1.2f' % info['peth_snr'], fontsize=labels_fontsize)
-        ax.set_ylim([-4, 4])
-
-    # -------------------
-    # multi session stats
-    # -------------------
-    for idx, y, ylabel, df in zip(
-            [1, 2, 3],
-            ['v_vs_h_diam', 'trial_consistency', 'R2'],
-            ['Vert vs Horiz diameter $r$', 'Trial consistency', 'Decoding $R^2$'],
-            [tracker_metrics_df, tracker_metrics_df, decoding_metrics_df]
-    ):
-        ax = fig.add_subplot(gs[idx, 3])
-        logy = True if y == 'trial_consistency' else False
-        vals = plot_box(
-            ax=ax, df=df, y=y, ylabel=ylabel, logy=logy, fontsize_label=labels_fontsize,
-        )
-
-        # # print stats
-        # print(ylabel)
-        # s01 = wilcoxon(vals[:, 1], y=vals[:, 0], alternative='greater')
-        # s02 = wilcoxon(vals[:, 2], y=vals[:, 0], alternative='greater')
-        # s12 = wilcoxon(vals[:, 2], y=vals[:, 1], alternative='greater')
-        # means = np.nanmean(vals, axis=0)
-        # sems = np.nanstd(vals, axis=0) / np.sqrt(vals.shape[0])
-        # print(f'0: {round(means[0], 2)}+/-{round(sems[0], 2)}')
-        # print(f'1: {round(means[1], 2)}+/-{round(sems[1], 2)}')
-        # print(f'2: {round(means[2], 2)}+/-{round(sems[2], 2)}')
-        # print(f'0-1: p={s01.pvalue}')
-        # print(f'0-2: p={s02.pvalue}')
-        # print(f'1-2: p={s12.pvalue}')
-        # print()
-
-    # ----------------------------------------------------------------
-    # cleanup
-    # ----------------------------------------------------------------
-    plt.suptitle('ibl-pupil dataset', fontsize=labels_fontsize + 6)
-    os.makedirs(os.path.dirname(save_file), exist_ok=True)
-    plt.savefig(save_file, dpi=300)
-    plt.close()
+        ax.set_xlabel('Ensemble std dev', fontsize=10)
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
 
 
-def plot_figure5_paw(
-    save_file,
-    data_dir,
-    n_skip_scatter=100,  # scatter on frame
-    n_skip_scatter_cca=10,  # cca scatter
+def plot_traces(
+    df_smoothers,
+    df_raw,
+    keypoint,
+    coord,
+    time_window,
+    fig,
+    subplot_spec,
+    colors,
 ):
+    n_rows = len(df_smoothers)
 
-    # ---------------------------------------------------
-    # define analysis parameters
-    # ---------------------------------------------------
-    keypoint_names = dataset_info['ibl-paw']['keypoints']
-    labels_fontsize = 10
-    colors = {
-        'paw_l': '#EF553B',
-        'paw_r': '#00CC96',
-    }
-
-    # ---------------------------------------------------
-    # load data
-    # ---------------------------------------------------
-    single_sess_path = os.path.join(
-        data_dir,
-        'results_dataframes',
-        'ibl-paw_tracker_comparisons_1b715600-0cbc-442c-bd00-5b0ac2865de1.pkl'
+    gs = gridspec.GridSpecFromSubplotSpec(
+        n_rows, 2, subplot_spec=subplot_spec,
+        hspace=0.2, width_ratios=[1, 1], wspace=0.05,
     )
-    single_sess_info = pd.read_pickle(single_sess_path)
+    for ax_idx, plot_diffs in enumerate([False, True]):
+        cols0 = (f'{keypoint}_{coord}')
+        # plot smoothers
+        for idx, (smoother_name, df_) in enumerate(df_smoothers.items()):
+            ax = fig.add_subplot(gs[idx, ax_idx])
+            # plot individual models
+            for i, (_, df) in enumerate(df_raw.items()):
+                m = df.loc[:, cols0].to_numpy()
+                if (smoother_name == 'arima' or smoother_name == 'median-filt') \
+                        and (i != 4):
+                    continue
+                data = m[slice(*time_window)]
+                data = np.diff(data) if plot_diffs else data
+                ax.plot(data, color=[0.5, 0.5, 0.5], linewidth=0.5, alpha=0.5)
+                if smoother_name.find('eks') > -1 \
+                        and len(smoother_name.split('-')) == 3:
+                    # we're using a specific subsample of ensemble members for eks
+                    idx_member = int(smoother_name.split('-')[-1])
+                    if idx_member == i + 1:
+                        # exit loop here
+                        break
 
-    tracker_metrics_path = os.path.join(
-        data_dir, 'results_dataframes', 'ibl-paw_tracker_metrics.csv',
-    )
-    tracker_metrics_df = pd.read_csv(tracker_metrics_path)
-
-    decoding_metrics_path = os.path.join(
-        data_dir, 'results_dataframes', 'ibl-paw_decoding_metrics.csv',
-    )
-    decoding_metrics_df = pd.read_csv(decoding_metrics_path)
-
-    # ---------------------------------------------------
-    # plot figure
-    # ---------------------------------------------------
-    fig = plt.figure(constrained_layout=False, figsize=(12, 13))
-    gs = fig.add_gridspec(
-        4, 5, hspace=0.4, wspace=0.4,
-        width_ratios=[1, 1, 1, 0.75, 0.75],
-        height_ratios=[1.2, 1, 1, 1],
-    )
-
-    # -------------------------------------------------
-    # single session example
-    # -------------------------------------------------
-    trackers = ['dlc', 'lp', 'lp+ks']
-    for idx, tracker in enumerate(trackers):
-
-        paw = 'right_paw'  # just plot results on right paw
-        info = single_sess_info[tracker][paw]
-
-        # scatter keypoints on frame
-        gs1 = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=gs[0, idx], hspace=0)
-        for v, view in enumerate(['left', 'right']):
-            ax = fig.add_subplot(gs1[v])
-            if view == 'right':
-                frame = np.fliplr(info['frames'][view])
-            else:
-                frame = info['frames'][view]
-            ax.imshow(frame, cmap='gray', vmin=0, vmax=255)
-            for kp in keypoint_names:
-                if view == 'right':
-                    kp_ = 'paw_l' if kp == 'paw_r' else 'paw_r'
-                    xs = 128 - info['data'][view]['dlc_df'][f'{kp_}_x'][::n_skip_scatter]
-                else:
-                    kp_ = kp
-                    xs = info['data'][view]['dlc_df'][f'{kp_}_x'][::n_skip_scatter]
-                ys = info['data'][view]['dlc_df'][f'{kp_}_y'][::n_skip_scatter]
-                ax.scatter(xs, ys, alpha=0.5, s=0.01, label=kp, c=colors[kp])
+            if idx == 0:
+                ylims = ax.get_ylim()
+            if plot_diffs:
+                ylims = [-50, 50]
+            # plot smoothed model
+            model_name = df_.columns.get_level_values('scorer')[0]
+            cols1 = (model_name, keypoint, coord)
+            data = df_.loc[:, cols1].to_numpy()[slice(*time_window)]
+            data = np.diff(data) if plot_diffs else data
+            ax.plot(
+                data,
+                color=colors[idx],
+                linewidth=1,
+            )
             ax.set_xticks([])
             ax.set_yticks([])
-            ax.set_xlim([0, info['frames'][view].shape[1]])
-            ax.set_ylim([info['frames'][view].shape[0], 0])
-            ax.text(
-                0.05, 0.05, f'{view.capitalize()} view',
-                transform=ax.transAxes,
-                fontsize=labels_fontsize,
-                color='w',
-            )
-            ax.set_title(
-                'LP+EKS' if tracker == 'lp+ks' else tracker.upper(), fontsize=labels_fontsize,
-            )
+            ax.set_ylim(ylims)
+            # fix axes
+            ax.axis('off')
+            if ax_idx == 0:
+                ax.text(
+                    0.0, 0.95, smoother_name, fontsize=8,
+                    ha='left', va='center', rotation=0, transform=ax.transAxes,
+                )
+            if idx == 0:
+                metric = 'velocity' if plot_diffs else 'position'
+                ax.set_title(f'{cols0} {metric}', fontsize=8)
 
-        # cca projections
-        ax = fig.add_subplot(gs[1, idx])
-        x = info['data']['both']['lcam_cca0'][::n_skip_scatter_cca]
-        y = info['data']['both']['rcam_cca0'][::n_skip_scatter_cca]
-        if tracker == 'lp+ks':
-            xy = pd.DataFrame({
-                'left': x + 0.01 * np.random.randn(x.shape[0]),
-                'right': y + 0.01 * np.random.randn(y.shape[0]),
-            })
-        else:
-            xy = pd.DataFrame({'left': x, 'right': y})
-        sns.kdeplot(
-            data=xy, x='left', y='right', fill=True, bw_adjust=0.75, ax=ax, color='gray')
-        r, _, lo, hi = info['data']['both']['proj_corrs']
-        ax.text(
-            0.05, 0.95, 'Pearson $r$ = %1.2f' % r,
-            transform=ax.transAxes, va='top', fontsize=labels_fontsize,
-        )
-        ax.set_xlabel('Left video CCA proj', fontsize=labels_fontsize)
-        if idx == 0:
-            ax.set_ylabel('Right video CCA proj', fontsize=labels_fontsize)
-        else:
-            ax.set_ylabel('')
-        cleanaxis(ax)
-        ax.set_title('Left paw' if paw == 'left_paw' else 'Right paw')
-        ax.set_aspect('equal')
-        ax.set_xlim([-3.2, 3.2])
-        ax.set_ylim([-3.2, 3.2])
-        ax.plot([-3, 3], [-3, 3], '-k', linewidth=0.25)
 
-        # traces/peth
-        ax = fig.add_subplot(gs[2, idx])
-        view = 'right'  # just plot results from a single view
-        data_ = info['data'][view]
-        traces = data_['correct_traces']
-        traces_no_mean = traces
-        trace_mean = np.nanmedian(traces_no_mean, axis=1)
-        ci = 1.96 * np.nanstd(traces_no_mean, axis=1) / np.sqrt(traces_no_mean.shape[1])
-        ax.fill_between(
-            data_['times'], trace_mean - ci, trace_mean + ci, color='k', alpha=0.25,
-        )
-        # plot peth
-        ax.plot(data_['times'], trace_mean, c='k', label='correct trial')
-        ax.axvline(x=0, label='Movement onset', linestyle='--', c='k')
-        ax.set_xticks([-0.5, 0, 0.5, 1, 1.5])
-        ax.set_xlabel('Time (s)', fontsize=labels_fontsize)
-        if idx == 0:
-            ax.set_ylabel('Paw speed (pix/s)', fontsize=labels_fontsize)
-        else:
-            ax.set_ylabel('')
-        cleanaxis(ax)
-        if idx == 1:
-            ax.text(
-                0.27, 0.98, 'Movement onset',
-                transform=ax.transAxes, va='top', fontsize=labels_fontsize,
-            )
-        ax.set_title(
-            'Trial consistency = %1.2f' % info['data'][view]['peth_snr'],
-            fontsize=labels_fontsize,
-        )
-        ax.set_ylim([-20, 250])
+def plot_figure5_all_panels(
+    save_file,
+    df_ground_truth,
+    df_labeled_preds,
+    df_labeled_post,
+    df_labeled_eks,
+    trace_data,
+    train_frames_list,
+    train_frames_list_actual,
+    std_vals,
+    traces_keypoint,
+    traces_coord,
+    traces_time_window,
+):
 
-    # -------------------------------------------------
-    # multi session stats
-    # -------------------------------------------------
-    for idx_p, paw in enumerate(['right', 'left']):
-        for idx, y, ylabel, df in zip(
-                [1, 2, 3],
-                ['cca_r', 'trial_consistency', 'R2'],
-                ['CCA projection corr ($r$)', 'Trial consistency', 'Decoding $R^2$'],
-                [tracker_metrics_df, tracker_metrics_df, decoding_metrics_df]
-        ):
-            ax = fig.add_subplot(gs[idx, 3 + idx_p])
-            if df is None:
-                continue
-            vals = plot_box(
-                ax=ax, df=df[df.paw == paw], y=y, ylabel=ylabel, fontsize_label=labels_fontsize,
-            )
-            if idx_p > 0:
-                ax.set_ylabel('')
-            if idx == 1:
-                ax.set_title(f'{paw.capitalize()} paw')
+    # ---------------------------------------------------
+    # compute metrics as a function of ensemble var
+    # ---------------------------------------------------
+    post_processors_post_dict = {
+        'median-filt': ['0', '1', '2', '3', '4'],
+        'arima': ['0', '1', '2', '3', '4'],
+        'ens-mean': ['all'],
+        'ens-median': ['all'],
+        'eks-temporal': ['all'],
+        'eks-pca': ['all'],
+        'raw': ['0', '1', '2', '3', '4'],
+    }
+    df_w_vars_post = compute_ensemble_var_for_each_pixel_error(
+        df_ground_truth=df_ground_truth,
+        df_labeled_preds=df_labeled_preds,
+        df_labeled_metrics=df_labeled_post,
+        post_processors_dict=post_processors_post_dict,
+        train_frames=train_frames_list,
+        models=['dlc'],
+        rng_seeds=['0', '1', '2', '3', '4'],
+        split_set='test',
+        distribution='OOD',
+    )
+    df_line_post, n_points_dict_post = compute_pixel_error_using_ensemble_std_dev_threshold(
+        df=df_w_vars_post,
+        train_frames=train_frames_list,
+        std_vals=std_vals,
+    )
 
-            # # print stats
-            # print(f'{paw}: {ylabel}')
-            # s01 = wilcoxon(vals[:, 1], y=vals[:, 0], alternative='greater')
-            # s02 = wilcoxon(vals[:, 2], y=vals[:, 0], alternative='greater')
-            # s12 = wilcoxon(vals[:, 2], y=vals[:, 1], alternative='greater')
-            # means = np.nanmean(vals, axis=0)
-            # sems = np.nanstd(vals, axis=0) / np.sqrt(vals.shape[0])
-            # print(f'0: {round(means[0], 2)}+/-{round(sems[0], 2)}')
-            # print(f'1: {round(means[1], 2)}+/-{round(sems[1], 2)}')
-            # print(f'2: {round(means[2], 2)}+/-{round(sems[2], 2)}')
-            # print(f'0-1: p={s01.pvalue}')
-            # print(f'0-2: p={s02.pvalue}')
-            # print(f'1-2: p={s12.pvalue}')
-            # print()
+    # plot eks w/ various ensemble numbers
+    post_processors_eks_dict = {
+        'eks-temporal-2': ['all'],
+        'eks-temporal-3': ['all'],
+        'eks-temporal-4': ['all'],
+        'eks-temporal-5': ['all'],
+        'eks-temporal-6': ['all'],
+        'eks-temporal-8': ['all'],
+        'raw': ['0', '1', '2', '3', '4'],
+    }
+    df_w_vars_eks = compute_ensemble_var_for_each_pixel_error(
+        df_ground_truth=df_ground_truth,
+        df_labeled_preds=df_labeled_preds,
+        df_labeled_metrics=df_labeled_eks,
+        post_processors_dict=post_processors_eks_dict,
+        train_frames=train_frames_list,
+        models=['dlc'],
+        rng_seeds=['0', '1', '2', '3', '4'],
+        split_set='test',
+        distribution='OOD',
+    )
+    df_line_eks, n_points_dict_eks = compute_pixel_error_using_ensemble_std_dev_threshold(
+        df=df_w_vars_eks,
+        train_frames=train_frames_list,
+        std_vals=std_vals,
+    )
+
+    # ---------------------------------------------------
+    # plot figure
+    # ---------------------------------------------------
+    fig = plt.figure(constrained_layout=False, figsize=(9, 7))
+    gs = fig.add_gridspec(2, 2, height_ratios=[1, 1.6], hspace=0.4, wspace=0.2)
+    gs00 = gridspec.GridSpecFromSubplotSpec(1, 2, subplot_spec=gs[0, 0], wspace=0.3)
+    gs01 = gridspec.GridSpecFromSubplotSpec(1, 2, subplot_spec=gs[0, 1], wspace=0.3)
+
+    # ---------------------------------------------------
+    # pixel error - post-processors
+    # ---------------------------------------------------
+    base = sns.color_palette("hls", 7)
+    colors = [base[0], base[2], base[3], base[4], base[5], base[6], [0.5, 0.5, 0.5]]
+    axes = [
+        fig.add_subplot(gs00[0]),
+        fig.add_subplot(gs00[1]),
+    ]
+    plot_pixel_error_vs_ensemble_std_dev(
+        df_line=df_line_post,
+        colors=colors,
+        axes=axes,
+        train_frames_list=train_frames_list,
+        train_frames_list_actual=train_frames_list_actual,
+        n_points_dict=n_points_dict_post,
+        std_vals=std_vals,
+        percentiles=[100, 50, 5],
+    )
+
+    # ---------------------------------------------------
+    # traces - post-processors
+    # ---------------------------------------------------
+    smoothers = [
+        'median-filt',
+        'arima',
+        'ens-mean',
+        'ens-median',
+        'eks-temporal-5',
+        'eks-pca',
+    ]
+    raw_models = [f'raw-{i}' for i in range(5)]
+    plot_traces(
+        df_smoothers={s: trace_data[s] for s in smoothers},
+        df_raw={s: trace_data[s] for s in raw_models},
+        keypoint=traces_keypoint,
+        coord=traces_coord,
+        time_window=traces_time_window,
+        fig=fig,
+        subplot_spec=gs[1, 0],
+        colors=colors[:-1],
+    )
+
+    # ---------------------------------------------------
+    # pixel error - ensemble members
+    # ---------------------------------------------------
+    base = sns.color_palette("hls", 7)[5]
+    colors_ = sns.dark_palette(base, len(post_processors_eks_dict), reverse=True)
+    colors = [
+        colors_[0], colors_[1], colors_[2], colors_[3], colors_[4], colors_[5], [0.5, 0.5, 0.5]
+    ]
+    axes = [
+        fig.add_subplot(gs01[0]),
+        fig.add_subplot(gs01[1]),
+    ]
+    plot_pixel_error_vs_ensemble_std_dev(
+        df_line=df_line_eks,
+        colors=colors,
+        axes=axes,
+        train_frames_list=train_frames_list,
+        train_frames_list_actual=train_frames_list_actual,
+        n_points_dict=n_points_dict_eks,
+        std_vals=std_vals,
+        percentiles=[100, 50, 5],
+    )
+
+    # ---------------------------------------------------
+    # traces - ensemble members
+    # ---------------------------------------------------
+    smoothers = [
+        'eks-temporal-2',
+        'eks-temporal-3',
+        'eks-temporal-4',
+        'eks-temporal-5',
+        'eks-temporal-6',
+        'eks-temporal-8',
+    ]
+    raw_models = [f'raw-{i}' for i in range(8)]
+    plot_traces(
+        df_smoothers={s: trace_data[s] for s in smoothers},
+        df_raw={s: trace_data[s] for s in raw_models},
+        keypoint=traces_keypoint,
+        coord=traces_coord,
+        time_window=traces_time_window,
+        fig=fig,
+        subplot_spec=gs[1, 1],
+        colors=colors[:-1],
+    )
 
     # ----------------------------------------------------------------
     # cleanup
     # ----------------------------------------------------------------
-    plt.suptitle('ibl-paw dataset', fontsize=labels_fontsize + 6)
     os.makedirs(os.path.dirname(save_file), exist_ok=True)
     plt.savefig(save_file, dpi=300)
     plt.close()
 
 
-def plot_figure5(data_dir, save_dir, dataset_name, format='pdf'):
+def plot_figure5(data_dir, save_dir, format='pdf'):
 
-    if dataset_name == 'ibl-pupil':
-        save_file = os.path.join(save_dir, f'fig5_ibl-pupil.{format}')
-        plot_figure5_pupil(
-            save_file=save_file,
-            data_dir=data_dir,
-        )
-    elif dataset_name == 'ibl-paw':
-        save_file = os.path.join(save_dir, f'fig5_ibl-paw.{format}')
-        plot_figure5_paw(
-            save_file=save_file,
-            data_dir=data_dir,
-        )
-    else:
-        raise NotImplementedError(f'dataset {dataset_name} not in [ibl-pupil, ibl-paw]; skipping')
+    # ----------------------------------------------------------------
+    # load data
+    # ----------------------------------------------------------------
+    dataset_name = dataset_info_fig5['dataset_name']
+
+    # load ground truth labels
+    df_ground_truth = pd.read_csv(
+        os.path.join(data_dir, dataset_name, 'labels_OOD.csv'),
+        index_col=0,
+        header=[1, 2],
+    )
+    df_ground_truth.sort_index(inplace=True)
+    # update relative paths in labeled data to match model results
+    df_ground_truth.index = [
+        p.replace('labeled-data_OOD/', 'labeled-data/') for p in df_ground_truth.index
+    ]
+
+    # load model predictions from dlc models
+    df_labeled_preds = pd.read_parquet(os.path.join(
+        data_dir, 'results_dataframes', 'mirror-mouse_labeled_preds_dlc_post-processors.pqt',
+    ))
+
+    # load metrics for labeled frames for post-processors
+    df_labeled_post = pd.read_parquet(os.path.join(
+        data_dir, 'results_dataframes', 'mirror-mouse_labeled_metrics_dlc_post-processors.pqt',
+    ))
+
+    # load metrics for labeled frames for eks w/ varying ensemble members
+    df_labeled_eks = pd.read_parquet(os.path.join(
+        data_dir, 'results_dataframes',
+        'mirror-mouse_labeled_metrics_dlc_post-processors-ensemble-size.pqt',
+    ))
+
+    # load model predictions for videos
+    trace_file = os.path.join(
+        data_dir, 'results_dataframes', 'mirror-mouse_video_preds_dlc_post-processors.pkl'
+    )
+    trace_data = pickle.load(open(trace_file, 'rb'))
+
+    # drop keypoints
+    cols_to_drop = dataset_info_fig5['cols_to_drop']
+    cols_to_keep = dataset_info_fig5['cols_to_keep']
+    if len(cols_to_drop) > 0:
+        df_ground_truth = df_ground_truth.drop(columns=cols_to_drop)
+        df_labeled_preds = df_labeled_preds.drop(columns=cols_to_drop)
+        df_labeled_post = df_labeled_post.drop(columns=cols_to_drop)
+        df_labeled_eks = df_labeled_eks.drop(columns=cols_to_drop)
+        # recompute means
+        if len(cols_to_keep) > 0:
+            df_labeled_post.loc[:, 'mean'] = df_labeled_post.loc[:, cols_to_keep].mean(axis=1)
+            df_labeled_eks.loc[:, 'mean'] = df_labeled_eks.loc[:, cols_to_keep].mean(axis=1)
+
+    # ----------------------------------------------------------------
+    # plot
+    # ----------------------------------------------------------------
+    save_file = os.path.join(save_dir, f'fig5_{dataset_name}.{format}')
+    plot_figure5_all_panels(
+        save_file=save_file,
+        df_ground_truth=df_ground_truth,
+        df_labeled_preds=df_labeled_preds,
+        df_labeled_post=df_labeled_post,
+        df_labeled_eks=df_labeled_eks,
+        trace_data=trace_data,
+        train_frames_list=dataset_info_fig5['train_frames_list'],
+        train_frames_list_actual=dataset_info_fig5['train_frames_actual'],
+        std_vals=dataset_info_fig5['std_vals'],
+        traces_keypoint=dataset_info_fig5['keypoint'],
+        traces_coord=dataset_info_fig5['coord'],
+        traces_time_window=dataset_info_fig5['time_window'],
+    )

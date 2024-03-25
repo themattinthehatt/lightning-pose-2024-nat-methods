@@ -9,27 +9,12 @@ import seaborn as sns
 from lightning_pose_plots import model_order, model_colors, dataset_info_fig4
 from lightning_pose_plots.utilities import (
     cleanaxis,
+    compute_ensemble_variance,
+    compute_percentiles,
     get_frames_from_idxs,
     get_trace_mask,
     load_results_dataframes,
 )
-
-
-def compute_percentiles(arr, std_vals, percentiles):
-    num_pts = arr[0]
-    vals = []
-    prctiles = []
-    for p in percentiles:
-        v = num_pts * p / 100
-        idx = np.argmin(np.abs(arr - v))
-        # maybe we don't have enough data
-        if idx == len(arr) - 1:
-            p_ = arr[idx] / num_pts * 100
-        else:
-            p_ = p
-        vals.append(std_vals[idx])
-        prctiles.append(p_)
-    return vals, prctiles
 
 
 def compute_ensemble_var_for_each_pixel_error(
@@ -71,24 +56,16 @@ def compute_ensemble_var_for_each_pixel_error(
     df_w_vars = []
     for train_frame_ in train_frames:
         # compute ensemble variance
-        preds = []
-        for model in models:
-            mask = ((df_labeled_preds.set == split_set)
-                    & (df_labeled_preds.distribution == distribution)
-                    & (df_labeled_preds.train_frames == train_frame_)
-                    & (df_labeled_preds.model_type == model)
-                    )
-            df_tmp = df_labeled_preds[mask]
-            for rng in rng_seeds:
-                df_tmp1 = df_tmp[df_tmp.rng_seed_data_pt == rng].drop(
-                    columns=['set', 'distribution', 'model_path', 'rng_seed_data_pt',
-                             'train_frames', 'model_type'])
-                assert np.all(df_tmp1.index == df_ground_truth.index)
-                # get rid of likelihood
-                arr = df_tmp1.to_numpy().reshape(df_tmp1.shape[0], -1, 3)[:, :, :2]
-                preds.append(arr[..., None])
-        preds = np.concatenate(preds, axis=3)
-        net_vars = np.std(preds, axis=-1).mean(axis=-1)
+        net_vars = compute_ensemble_variance(
+            df_ground_truth=df_ground_truth,
+            df_preds=df_labeled_preds,
+            train_frames=train_frame_,
+            models=models,
+            rng_seeds=rng_seeds,
+            split_set=split_set,
+            distribution=distribution,
+            sort_df=False,
+        )
         # record pixel errors along with ensemble variances
         for model in models:
             for rng in rng_seeds:
