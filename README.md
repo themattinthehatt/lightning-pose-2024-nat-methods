@@ -2,7 +2,7 @@
 
 [![DOI](https://zenodo.org/badge/764385684.svg)](https://zenodo.org/doi/10.5281/zenodo.10819529)
 
-This repository provides code to rerproduce the figures in the manuscript [Biderman, Whiteway et al, 2024](https://www.biorxiv.org/content/10.1101/2023.04.28.538703v1).
+This repository provides code to reproduce the figures in the manuscript [Biderman, Whiteway et al, 2024](https://www.biorxiv.org/content/10.1101/2023.04.28.538703v1).
 
 ## Dependencies
 The code has been tested on Ubuntu 18.04 and 22.04, using Python 3.10.
